@@ -1,0 +1,31 @@
+name: Build and publish .skill
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package skill archive
+        run: |
+          STAGE="bpmn-process-modeler"
+          mkdir -p "build/$STAGE"
+          cp SKILL.md README.md "build/$STAGE/"
+          cp -r references "build/$STAGE/"
+          cd build
+          zip -r "../bpmn-process-modeler.skill" "$STAGE"
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bpmn-process-modeler.skill
+          draft: false
+          prerelease: false
