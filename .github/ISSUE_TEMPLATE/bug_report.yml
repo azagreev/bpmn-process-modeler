@@ -1,0 +1,14 @@
+name: Bug report
+description: Skill generates incorrect BPMN or validator behaves unexpectedly
+labels: [bug]
+body:
+  - type: textarea
+    attributes: { label: "Input process description", description: "Paste the text you gave to the skill" }
+  - type: textarea
+    attributes: { label: "Expected output", description: "What should have happened" }
+  - type: textarea
+    attributes: { label: "Actual output", description: "BPMN XML, Excel, validator verdict, or error" }
+  - type: input
+    attributes: { label: "Skill version", description: "e.g. v1.1 or commit SHA" }
+  - type: input
+    attributes: { label: "Environment", description: "claude.ai Pro / Team / Enterprise" }

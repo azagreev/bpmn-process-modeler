@@ -1,8 +1,10 @@
 # BPMN Process Modeler
 
+📬 Feedback: GitHub Issues | Telegram @zagreev
+
 Скилл для Claude, который превращает неструктурированное описание процесса в читаемую BPMN 2.0 схему (Camunda 7, Platform) и — по запросу — в Excel-спецификацию, сверенную со схемой.
 
-**Версия:** 1.1
+**Версия:** 2.0
 **Автор:** Andrey Zagreev — [@zagreev](https://t.me/zagreev)
 **Лицензия:** [MIT](#лицензия)
 **Целевая платформа:** Camunda 7 (Platform)
@@ -25,6 +27,7 @@
 - [Известные ограничения](#известные-ограничения)
 - [Troubleshooting / FAQ](#troubleshooting--faq)
 - [Обратная связь и итерации](#обратная-связь-и-итерации)
+- [Contributing](CONTRIBUTING.md)
 - [Changelog](#changelog)
 - [Благодарности](#благодарности)
 - [Лицензия](#лицензия)
@@ -213,6 +216,50 @@ bpmn-process-modeler/
 Рекомендуется итерировать на 2–3 реальных процессах из своей предметной области перед тем, как отдавать коллегам.
 
 ## Changelog
+
+### v2.0 — апрель 2026
+
+Первый публичный релиз через GitHub Releases.
+
+**Про нумерацию.** Версии 1.0 и 1.1 существовали как внутренние отметки в процессе разработки и распространялись напрямую без публикации через GitHub Releases. Первый релиз с воспроизводимым артефактом и публичной точкой скачивания — v2.0. Внутренние changelog-секции v1.0 и v1.1 сохранены ниже как история разработки.
+
+**Что в релизе.**
+
+Основной workflow:
+- 9-шаговый pipeline: загрузка Camunda knowledge → классификация входа → выбор топологии → выбор декомпозиции → генерация BPMN 2.0 XML → валидация → показ пользователю с approval gate → Excel-выгрузка → reconciliation BPMN ↔ Excel
+- Целевая платформа: Camunda 7 (Platform), все extension elements в namespace `camunda:*`
+- Полная локализация: семантические метки BPMN (имена пулов, лэйнов, задач, событий, шлюзов, условий на стрелках) — на русском; продуктовые и бренд-названия из whitelist (Camunda, SBM, n11, Fibabanka и др.) сохраняются как есть; технические BPMN id остаются в латинице
+
+Отказоустойчивость:
+- Трёхступенчатый fallback при загрузке Camunda knowledge: Camunda MCP (preferred, live docs) → локальный snapshot `camunda-knowledge-snapshot.md` (~1170 строк, hybrid-выжимка Camunda 7 docs) → HALT только при повреждённой установке
+- Degraded-mode warning в Step 7: при использовании snapshot — явное предупреждение пользователю с рекомендациями для prod-деплоя
+- Дата обновления snapshot вынесена в H1-заголовок файла; инструкция по обновлению — в секции «Refresh snapshot procedure» README
+
+Валидация и качество:
+- 7 блокирующих проверок XML: well-formedness, BPMN schema conformance, structural integrity (10 подпунктов: sequence flows, start/end events, reachability, gateway fan-in/out, infinite loops, event references, boundary events, duplicate IDs, subprocess types, data objects), message flows и collaboration, Camunda 7 executability, DI completeness, language conformance
+- 10 рекомендательных best practices (на основе Camunda bpmnlint и docs): technical ID naming, business-side event labels, business vs technical errors, happy path emphasis, sentence case, один executable process в collaboration, alignment имени файла с process ID, unused resources, empty process, circular call activity detection
+- 9 проверок reconciliation Excel ↔ BPMN перед выдачей файла: node count parity, ID-level mapping, name parity, lane/pool parity, gateway decision rules, end event outcomes, annotation coverage, execution order sanity, UTF-8 integrity
+
+Excel-спецификация:
+- 9-колоночный лист «Спецификация»: №, Элемент BPMN, Название, Тип, Участник, Описание/Бизнес-правила, Входные данные, Выходные данные, Примечания/Compliance
+- Лист «Участники»: пулы и лэйны с описанием ролей и количеством задач
+- Лист «Открытые вопросы»: все аннотации «⚠ Уточнить» — сведённый чек-лист для следующей встречи с категорией и приоритетом
+- Цветовая кодировка типов BPMN, скрытая колонка `_BPMN_ID` для сверки, freeze panes, wrap text
+- Excel-выгрузка только после явного approval пользователем диаграммы
+
+Покрытие отраслей (24 процесса в 8 reference-файлах):
+- **fintech-patterns.md** — 17 процессов: KYC (retail) / KYB / Seller KYB / BaaS onboarding / Payment authorization / 3DS-SCA / P2P-cross-border / Chargeback / Refund / BNPL / Collection / Leasing / Factoring / Settlement-payout / Regulatory reporting / Seller lending / RBF (Merchant Cash Advance)
+- **marketplace-patterns.md** — 5 процессов: Order-to-cash / Returns / Pick-Pack-Ship / Seller discovery / Cross-border marketplace
+- **project-finance-patterns.md** — 4 процесса: Розничная ипотека / Кредитование застройщиков (214-ФЗ) / Проектное финансирование (SPV, IC) / Workout
+- **healthcare-patterns.md** — 2 процесса: приём пациента, диспансеризация
+- **manufacturing-patterns.md** — 1 процесс: производственный заказ
+- **hr-patterns.md** — 2 процесса: онбординг, отпуск
+- **public-sector-patterns.md** — 1 процесс: государственная услуга (210-ФЗ)
+- **it-ops-patterns.md** — 2 процесса: incident management, change management
+
+Compliance-рамка покрывает: РФ (115-ФЗ, 353-ФЗ, 161-ФЗ, 102-ФЗ, 214-ФЗ, 151-ФЗ, 230-ФЗ, 152-ФЗ, 54-ФЗ, 63-ФЗ, 210-ФЗ, ГК РФ, НК РФ, Положения ЦБ РФ 266-П, 383-П, 499-П, 590-П, 611-П, 4212-У), ЕАЭС (UZ ЗРУ-765, KZ ARDFM AEIR cap, BY), Турция (BDDK, Закон 6493, Закон 6502, Yönetmelik R.G. 31704), Эфиопия (NBE Directive ONPS/10/2025, Reg. 586/2026), США (HIPAA), ЕС (GDPR, PSD2, EHDS, Directive 2011/83/EU), международные стандарты (FATF 40 Recommendations, IFC Performance Standards, ISO 9001, IATF 16949, GMP, ITIL 4, PCI DSS).
+
+Артефакт `bpmn-process-modeler.skill` собирается автоматически через GitHub Actions (`.github/workflows/build-skill.yml`) при push любого тега `v*` и публикуется в GitHub Release.
 
 ### v1.1 — апрель 2026
 
