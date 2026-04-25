@@ -1,0 +1,66 @@
+name: Release Checks
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  release-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify version metadata
+        run: |
+          skill_version="$(awk -F': ' '/^version:/ {print $2; exit}' SKILL.md)"
+          readme_version="$(sed -n 's/^\*\*Версия:\*\* //p' README.md | head -1)"
+          test "$skill_version" = "$readme_version"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            test "${GITHUB_REF_NAME#v}" = "$skill_version"
+          fi
+
+      - name: Verify release notes text
+        run: |
+          grep -q 'Покрытие отраслей (34 процесса в 8 reference-файлах)' README.md
+          ! grep -q 'Покрытие отраслей (24 процесса' README.md
+          ! grep -q 'Первый публичный релиз через GitHub Releases' README.md
+
+      - name: Build dry-run archive
+        run: |
+          STAGE="bpmn-process-modeler"
+          mkdir -p "build/$STAGE"
+          cp SKILL.md README.md LICENSE CONTRIBUTING.md SECURITY.md "build/$STAGE/"
+          cp -r references "build/$STAGE/"
+          cd build
+          zip -r "../bpmn-process-modeler.skill" "$STAGE"
+          cd ..
+          unzip -t bpmn-process-modeler.skill
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/LICENSE'
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/CONTRIBUTING.md'
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/SECURITY.md'
+
+      - name: Verify package markdown links
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path("build/bpmn-process-modeler").resolve()
+          failures = []
+          for path in sorted(root.rglob("*.md")):
+              text = path.read_text(encoding="utf-8")
+              for match in re.finditer(r"\[[^\]]+\]\(([^)#][^)]+)\)", text):
+                  link = match.group(1)
+                  if "://" in link or link.startswith("mailto:"):
+                      continue
+                  target = (path.parent / link).resolve()
+                  try:
+                      target.relative_to(root)
+                  except ValueError:
+                      failures.append(f"{path.relative_to(root)} links outside package: {link}")
+                      continue
+                  if not target.exists():
+                      line = text.count("\n", 0, match.start()) + 1
+                      failures.append(f"{path.relative_to(root)}:{line} missing {link}")
+          if failures:
+              raise SystemExit("\n".join(failures))
+          PY

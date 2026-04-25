@@ -18,10 +18,17 @@ jobs:
         run: |
           STAGE="bpmn-process-modeler"
           mkdir -p "build/$STAGE"
-          cp SKILL.md README.md "build/$STAGE/"
+          cp SKILL.md README.md LICENSE CONTRIBUTING.md SECURITY.md "build/$STAGE/"
           cp -r references "build/$STAGE/"
           cd build
           zip -r "../bpmn-process-modeler.skill" "$STAGE"
+
+      - name: Verify skill archive
+        run: |
+          unzip -t bpmn-process-modeler.skill
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/LICENSE'
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/CONTRIBUTING.md'
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/SECURITY.md'
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2

@@ -2,7 +2,7 @@
 
 ## Reporting bugs
 
-Please report bugs through the [Bug report issue template](.github/ISSUE_TEMPLATE/bug_report.yml). Include the input process description, expected output, actual output, skill version, and environment.
+Please report bugs through GitHub Issues: https://github.com/azagreev/bpmn-process-modeler/issues/new/choose. Include the input process description, expected output, actual output, skill version, and environment.
 
 ## Security issues
 

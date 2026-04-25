@@ -219,9 +219,9 @@ bpmn-process-modeler/
 
 ### v2.0 — апрель 2026
 
-Первый публичный релиз через GitHub Releases.
+Поддерживаемый публичный релиз с воспроизводимым `.skill`-артефактом и полной релизной документацией.
 
-**Про нумерацию.** Версии 1.0 и 1.1 существовали как внутренние отметки в процессе разработки и распространялись напрямую без публикации через GitHub Releases. Первый релиз с воспроизводимым артефактом и публичной точкой скачивания — v2.0. Внутренние changelog-секции v1.0 и v1.1 сохранены ниже как история разработки.
+**Про нумерацию.** Версии 1.0 и 1.1 существовали как внутренние отметки в процессе разработки и ранней публикации. Исторический GitHub Release v1.1.0 был создан автоматически без релизных заметок и без полного пакета метаданных. v2.0 — первая поддерживаемая публичная точка скачивания с описанным артефактом, changelog и release notes. Внутренние changelog-секции v1.0 и v1.1 сохранены ниже как история разработки.
 
 **Что в релизе.**
 
@@ -247,7 +247,7 @@ Excel-спецификация:
 - Цветовая кодировка типов BPMN, скрытая колонка `_BPMN_ID` для сверки, freeze panes, wrap text
 - Excel-выгрузка только после явного approval пользователем диаграммы
 
-Покрытие отраслей (24 процесса в 8 reference-файлах):
+Покрытие отраслей (34 процесса в 8 reference-файлах):
 - **fintech-patterns.md** — 17 процессов: KYC (retail) / KYB / Seller KYB / BaaS onboarding / Payment authorization / 3DS-SCA / P2P-cross-border / Chargeback / Refund / BNPL / Collection / Leasing / Factoring / Settlement-payout / Regulatory reporting / Seller lending / RBF (Merchant Cash Advance)
 - **marketplace-patterns.md** — 5 процессов: Order-to-cash / Returns / Pick-Pack-Ship / Seller discovery / Cross-border marketplace
 - **project-finance-patterns.md** — 4 процесса: Розничная ипотека / Кредитование застройщиков (214-ФЗ) / Проектное финансирование (SPV, IC) / Workout
