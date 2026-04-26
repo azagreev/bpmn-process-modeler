@@ -270,8 +270,8 @@ for process in root.iter('{*}process'):
 | Тип задачи | Обязательный атрибут |
 |---|---|
 | userTask | `camunda:assignee` ИЛИ `camunda:candidateUsers` ИЛИ `camunda:candidateGroups` |
-| serviceTask (external) | `camunda:type="external"` + `camunda:topic` |
-| serviceTask (internal) | `camunda:delegateExpression` ИЛИ `camunda:class` ИЛИ `camunda:expression` |
+| serviceTask / sendTask (external) | `camunda:type="external"` + `camunda:topic` |
+| serviceTask / sendTask (internal) | `camunda:delegateExpression` ИЛИ `camunda:class` ИЛИ `camunda:expression` |
 | businessRuleTask | `camunda:decisionRef` + `camunda:resultVariable` |
 | scriptTask | `scriptFormat` + inline `<script>` ИЛИ `camunda:resource` |
 | callActivity | `camunda:calledElement` |
@@ -286,20 +286,97 @@ Timer events обязаны иметь корректный `<timeDuration>`, `<
 
 **Типовая ошибка:** `<timeDuration>15 minutes</timeDuration>` — не ISO 8601, runtime fail. Должно быть `PT15M`.
 
-### 5b. Error throw events
+### 5b. Per-element camunda:* attribute compatibility — negative check
+
+Помимо positive-check'ов, валидатор обязан проверять, что Camunda extension attributes стоят только на тех BPMN-элементах, для которых они объявлены в `camunda-bpmn-moddle`. Это самый частый источник `unknown attribute` warnings в Camunda Modeler.
+
+| Атрибут | Допустимо на |
+|---|---|
+| `camunda:assignee` | userTask, manualTask* |
+| `camunda:candidateUsers` | userTask, manualTask* |
+| `camunda:candidateGroups` | userTask, manualTask* |
+| `camunda:dueDate` | userTask, manualTask* |
+| `camunda:followUpDate` | userTask, manualTask* |
+| `camunda:formKey` | userTask, startEvent |
+| `camunda:priority` | userTask, manualTask* |
+| `camunda:type` | serviceTask, sendTask, businessRuleTask |
+| `camunda:topic` | serviceTask, sendTask, businessRuleTask, scriptTask (when `camunda:type="external"`) |
+| `camunda:class` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:delegateExpression` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:expression` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:resultVariable` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:decisionRef` | businessRuleTask |
+| `camunda:mapDecisionResult` | businessRuleTask |
+| `camunda:resource` | scriptTask, businessRuleTask |
+| `camunda:calledElement` | callActivity |
+
+* `manualTask` only if you deliberately keep that legacy modeling pattern.
+
+**Python snippet:**
+
+```python
+CAMUNDA_NS = '{http://camunda.org/schema/1.0/bpmn}'
+ATTR_OWNERS = {
+    'assignee': {'userTask', 'manualTask'},
+    'candidateUsers': {'userTask', 'manualTask'},
+    'candidateGroups': {'userTask', 'manualTask'},
+    'dueDate': {'userTask', 'manualTask'},
+    'followUpDate': {'userTask', 'manualTask'},
+    'formKey': {'userTask', 'startEvent'},
+    'priority': {'userTask', 'manualTask'},
+    'type': {'serviceTask', 'sendTask', 'businessRuleTask'},
+    'topic': {'serviceTask', 'sendTask', 'businessRuleTask', 'scriptTask'},
+    'class': {'serviceTask', 'sendTask', 'businessRuleTask', 'scriptTask'},
+    'delegateExpression': {'serviceTask', 'sendTask', 'businessRuleTask', 'scriptTask'},
+    'expression': {'serviceTask', 'sendTask', 'businessRuleTask', 'scriptTask'},
+    'resultVariable': {'serviceTask', 'sendTask', 'businessRuleTask', 'scriptTask'},
+    'decisionRef': {'businessRuleTask'},
+    'mapDecisionResult': {'businessRuleTask'},
+    'resource': {'scriptTask', 'businessRuleTask'},
+    'calledElement': {'callActivity'},
+}
+
+def check_camunda_attr_compatibility(root):
+    violations = []
+    for el in root.iter():
+        tag = el.tag.split('}')[-1]
+        for attr_key, value in el.attrib.items():
+            if not attr_key.startswith(CAMUNDA_NS):
+                continue
+            attr_name = attr_key.replace(CAMUNDA_NS, '')
+            allowed = ATTR_OWNERS.get(attr_name)
+            if allowed is None:
+                continue
+            if tag not in allowed:
+                violations.append({
+                    'element_id': el.attrib.get('id'),
+                    'element_type': tag,
+                    'attribute': f'camunda:{attr_name}',
+                    'value': value,
+                    'allowed_on': sorted(allowed),
+                })
+    return violations
+```
+
+Если нарушение найдено — это блокирующий fail Check 5. Repair-действие:
+- если действие реально человеческое, сменить тип на `userTask`;
+- если действие реально автоматическое, удалить assignment-атрибуты и заменить на `camunda:type="external"` + `camunda:topic` или `camunda:class` / `camunda:delegateExpression`;
+- не глушить warning простым удалением атрибута без пересмотра BPMN-типа задачи.
+
+### 5c. Error throw events
 
 `errorEventDefinition` в end event или intermediate throw event:
 - Ссылается на `<bpmn:error errorRef="..."/>` (см. 3f)
 - Соответствующий `<bpmn:error>` имеет `errorCode` — без него catch event не сможет его поймать
 
-### 5c. FEEL reserved words в variables
+### 5d. FEEL reserved words в variables
 
 Нельзя использовать как имена переменных (из Camunda docs, Expression timeout rules):
 `true`, `false`, `null`, `function`, `if`, `then`, `else`, `for`, `between`, `instance`, `of`.
 
 Проверка: в expressions `${variable_name}` и FEEL `= variable_name`, переменные из output mappings — не должны совпадать с reserved words.
 
-### 5d. Multi-instance loop characteristics
+### 5e. Multi-instance loop characteristics
 
 Если есть `<multiInstanceLoopCharacteristics>`:
 
@@ -318,14 +395,14 @@ Timer events обязаны иметь корректный `<timeDuration>`, `<
 </bpmn:serviceTask>
 ```
 
-### 5e. Conditional events
+### 5f. Conditional events
 
 Если используются `<conditionalEventDefinition>` (редко, но встречается):
 - Обязателен дочерний `<condition>` с FEEL/JUEL-выражением
 - Выражение непустое, не reserved word
 - Для Camunda 7: язык expressions обычно JUEL `${amount > 1000}`
 
-### 5f. Прочие best practices
+### 5g. Прочие best practices
 
 - `isExecutable="true"` на `<process>` — обязательно для деплоя. Без него в Modeler откроется, но не деплоится.
 - `exporter="..."` и `exporterVersion="..."` на `<definitions>` — опциональны, но помогают при диагностике (Camunda Modeler заполняет автоматически).
@@ -498,7 +575,86 @@ for elem in root.iter():
 
 Это рекомендации Camunda и наблюдения по типовым анти-паттернам. Несоответствие — повод улучшить модель, но не останавливать показ пользователю. Выводятся в отчёте отдельным блоком с префиксом `⚠ WARN`.
 
-## 8. Technical ID naming convention
+## 8. Naming and readability (WARN, не блокируют)
+
+Проверки соответствия Camunda Best Practices по naming и readability. Не блокируют генерацию, но триггерят WARN с конкретной рекомендацией.
+
+| Под-чек | Правило | Порог |
+|---|---|---|
+| 8.1 | Длина имени задачи | WARN, если > 4 слов |
+| 8.2 | Compound-задачи | WARN, если в имени есть «и» / `and` |
+| 8.3 | Размер user/service/send task | WARN, если не `100×80` |
+| 8.4 | Размер event | WARN, если не `36×36` |
+| 8.5 | Размер gateway | WARN, если не `50×50` |
+| 8.6 | `<bpmn:documentation>` | INFO, если отсутствует на `userTask` / `serviceTask` / `sendTask` / `scriptTask` |
+| 8.7 | Lane abbreviations | WARN, если есть аббревиатура без расшифровки в скобках |
+| 8.8 | Glossary annotation | INFO, если в диаграмме есть аббревиатуры, но нет общего glossary text annotation |
+
+**Python snippet:**
+
+```python
+import re
+
+def check_readability(root, ns):
+    warnings = []
+
+    # 8.1 / 8.2
+    for tag in ['userTask', 'sendTask', 'serviceTask', 'businessRuleTask', 'scriptTask']:
+        for el in root.findall(f'.//bpmn:{tag}', ns):
+            name = el.attrib.get('name', '')
+            if not name:
+                continue
+            words = name.split()
+            if len(words) > 4:
+                warnings.append(f"8.1 [{el.attrib['id']}]: имя из {len(words)} слов — рекомендуется <= 4")
+            if ' и ' in name.lower() or ' and ' in name.lower():
+                warnings.append(f"8.2 [{el.attrib['id']}]: compound-задача — рассмотрите декомпозицию")
+
+    # 8.3 / 8.4 / 8.5
+    SIZES = {
+        'userTask': (100, 80), 'sendTask': (100, 80), 'serviceTask': (100, 80),
+        'businessRuleTask': (100, 80), 'scriptTask': (100, 80),
+        'startEvent': (36, 36), 'endEvent': (36, 36), 'intermediateCatchEvent': (36, 36),
+        'exclusiveGateway': (50, 50), 'parallelGateway': (50, 50),
+    }
+    shapes = root.findall('.//bpmndi:BPMNShape', ns)
+    for tag, (exp_w, exp_h) in SIZES.items():
+        for el in root.findall(f'.//bpmn:{tag}', ns):
+            shape = next((s for s in shapes if s.attrib.get('bpmnElement') == el.attrib['id']), None)
+            if shape is not None:
+                b = shape.find('dc:Bounds', ns)
+                if b is not None:
+                    w, h = int(float(b.attrib['width'])), int(float(b.attrib['height']))
+                    if (w, h) != (exp_w, exp_h):
+                        warnings.append(f"8.3-5 [{el.attrib['id']}] {tag}: {w}×{h} ≠ стандарт {exp_w}×{exp_h}")
+
+    # 8.6
+    for tag in ['userTask', 'serviceTask', 'sendTask', 'scriptTask']:
+        for el in root.findall(f'.//bpmn:{tag}', ns):
+            if el.find('bpmn:documentation', ns) is None:
+                warnings.append(f"8.6 [{el.attrib['id']}] {tag}: нет <bpmn:documentation> — INFO")
+
+    # 8.7
+    for lane in root.findall('.//bpmn:lane', ns):
+        name = lane.attrib.get('name', '')
+        has_abbrev = bool(re.search(r'[А-ЯЁ]{2,}', name))
+        has_explanation = '(' in name and ')' in name
+        if has_abbrev and not has_explanation:
+            warnings.append(f"8.7 [{lane.attrib['id']}] '{name}': аббревиатура без расшифровки")
+
+    # 8.8
+    has_glossary = any(
+        'Глоссарий' in ((a.find('bpmn:text', ns).text or '') if a.find('bpmn:text', ns) is not None else '')
+        for a in root.findall('.//bpmn:textAnnotation', ns)
+    )
+    has_abbrevs = any(re.search(r'[А-ЯЁ]{2,}', el.attrib.get('name', '')) for el in root.iter() if 'name' in el.attrib)
+    if has_abbrevs and not has_glossary:
+        warnings.append('8.8: в диаграмме есть аббревиатуры, но нет glossary text annotation — INFO')
+
+    return warnings
+```
+
+### 9. Technical ID naming convention
 
 Camunda рекомендует префиксы, соответствующие типу элемента (Best-practices: Naming technically relevant IDs):
 
@@ -521,7 +677,7 @@ Camunda рекомендует префиксы, соответствующие 
 
 Длина id < 256 символов — лимит для RDBMS-backed Camunda (Oracle/PostgreSQL). Для Elasticsearch лимит 32,768, но лучше держать короче — id попадают в логи.
 
-## 9. Event labels business-side
+## 10. Event labels business-side
 
 Camunda: «describe which state an object is in when the process is about to leave the event».
 
@@ -531,7 +687,7 @@ Camunda: «describe which state an object is in when the process is about to lea
 
 Антипаттерн: «Start», «End», «Finish», «Done», «Process started».
 
-## 10. Business vs technical errors
+## 11. Business vs technical errors
 
 Camunda: «retrying technical problems should not be modeled in the diagram».
 
@@ -540,7 +696,7 @@ Camunda: «retrying technical problems should not be modeled in the diagram».
 
 Антипаттерн: цикл retry в модели с boundary timer event на каждом сервисном вызове.
 
-## 11. Happy path emphasis
+## 12. Happy path emphasis
 
 Camunda: «place tasks, events, and gateways belonging to the happy path on a straight sequence flow in the center of the diagram».
 
@@ -548,24 +704,24 @@ Camunda: «place tasks, events, and gateways belonging to the happy path on a st
 
 Проверяется визуально (статический анализ затруднён). Эвристика: happy path — это путь от startEvent до первого endEvent без событий об ошибке, минимум gateway-ветвлений.
 
-## 12. Sentence case
+## 13. Sentence case
 
 Camunda recommended: первая буква заглавная, остальные строчные, кроме аббревиатур и имён собственных.
 
 - Правильно: «Проверить заявку», «Требуется ли SCA?»
 - Неправильно: «ПРОВЕРИТЬ ЗАЯВКУ», «Проверить Заявку»
 
-## 13. Один executable process в collaboration
+## 14. Один executable process в collaboration
 
 В коллаборейшен-модели с несколькими пулами обычно только один `<process>` имеет `isExecutable="true"` — это тот, который мы собираемся деплоить. Остальные — participant pools без `isExecutable`, представляющие внешние системы / контрагентов.
 
 Антипаттерн: `isExecutable="true"` на всех процессах в коллаборейшене. Путаница, какой деплоится.
 
-## 14. Filename aligned with process ID
+## 15. Filename aligned with process ID
 
 Camunda recommended: если процесс `BNPLApprovalProcess`, то файл `BNPLApprovalProcess.bpmn`. Облегчает поиск, diff, версионирование.
 
-## 15. Unused resources
+## 16. Unused resources
 
 `<bpmn:message>`, `<bpmn:error>`, `<bpmn:signal>`, `<bpmn:escalation>` объявлены на уровне `<definitions>`, но ни одно событие на них не ссылается. Не ошибка, но признак неполной доработки модели или остатка после рефакторинга.
 
@@ -577,7 +733,7 @@ if unused:
     print(f'WARN: unused messages: {unused}')
 ```
 
-## 16. Empty process
+## 17. Empty process
 
 Процесс содержит только `<startEvent>` → `<endEvent>` без промежуточных задач / шлюзов. Деплоится, выполняется, но бессмыслен.
 
@@ -591,7 +747,7 @@ for process in root.iter('{*}process'):
         print(f'WARN: empty process {process.get("id")} has no activities')
 ```
 
-## 17. Circular call activity detection
+## 18. Circular call activity detection
 
 Call Activity A вызывает process B, а B содержит call activity на process A. Runtime stack overflow.
 
@@ -616,18 +772,19 @@ Call Activity A вызывает process B, а B содержит call activity 
 ✅ 7. Language conformance (все N имён на русском, K whitelist)
 
 Рекомендательные (WARN, не блокируют):
-✅ 8. Technical ID naming
-⚠ 9. Event labels (3 события названы "Start" / "End" — стоит переформулировать business-side)
-✅ 10. Business vs technical errors
-✅ 11. Happy path emphasis
-⚠ 12. Sentence case (2 label'а в ALL CAPS)
-✅ 13. Один executable process
-✅ 14. Filename aligned
-✅ 15. Unused resources
-✅ 16. Empty process
-✅ 17. Circular call activity
+✅ 8. Naming and readability
+✅ 9. Technical ID naming
+⚠ 10. Event labels (3 события названы "Start" / "End" — стоит переформулировать business-side)
+✅ 11. Business vs technical errors
+✅ 12. Happy path emphasis
+⚠ 13. Sentence case (2 label'а в ALL CAPS)
+✅ 14. Один executable process
+✅ 15. Filename aligned
+✅ 16. Unused resources
+✅ 17. Empty process
+✅ 18. Circular call activity
 
-ИТОГ: ✅ ГОТОВО К ПОКАЗУ ПОЛЬЗОВАТЕЛЮ (7/7 блокирующих PASS, 8/10 рекомендательных PASS)
+ИТОГ: ✅ ГОТОВО К ПОКАЗУ ПОЛЬЗОВАТЕЛЮ (7/7 блокирующих PASS, 9/11 рекомендательных PASS)
 ```
 
 При FAIL на блокирующих — после каждого `❌` идёт конкретика: какой элемент, какой атрибут, почему не прошёл. Затем — автоматическая починка, повторный прогон, обновление отчёта.

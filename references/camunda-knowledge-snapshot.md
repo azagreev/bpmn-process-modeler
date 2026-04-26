@@ -1,11 +1,11 @@
-# Camunda Knowledge Snapshot — v1.0 (обновлён 2026-04-23)
+# Camunda Knowledge Snapshot — v1.0 (обновлён 2026-04-26)
 
 ```yaml
 snapshot_version: 1.0
-snapshot_date: 2026-04-23
+snapshot_date: 2026-04-26
 source: docs.camunda.io, Camunda 7 Platform documentation + Best Practices + bpmnlint rules
 target_platform: Camunda 7 (Platform)
-maintenance_note: Refresh recommended every 6 months. Next refresh due: 2026-10-23.
+maintenance_note: Refresh recommended every 6 months. Next refresh due: 2026-10-26.
 refresh_procedure: See README.md section "Refresh snapshot procedure"
 ```
 
@@ -35,7 +35,7 @@ refresh_procedure: See README.md section "Refresh snapshot procedure"
     id="Definitions_1"
     targetNamespace="http://bpmn.io/schema/bpmn"
     exporter="bpmn-process-modeler skill"
-    exporterVersion="1.0">
+    exporterVersion="2.0">
 
   <bpmn:process id="Process_1" name="..." isExecutable="true">
     <!-- Flow nodes здесь -->
@@ -132,6 +132,8 @@ refresh_procedure: See README.md section "Refresh snapshot procedure"
 ```
 
 Поведение — как serviceTask, но семантически означает «отправка сообщения». `messageRef` — опциональный link на объявленный message.
+Assignment-атрибуты (`camunda:assignee`, `camunda:candidateUsers`, `camunda:candidateGroups`) на `sendTask`
+не используем: если действие делает человек, это уже `userTask`.
 
 ### 2.4 Receive Task
 
@@ -628,16 +630,17 @@ refresh_procedure: See README.md section "Refresh snapshot procedure"
 
 | Элемент | Width × Height |
 |---|---|
-| Event (любой) | 36 × 36 |
-| Task (любой подтип) | 100 × 80 |
-| Gateway (любой) | 50 × 50 |
-| Subprocess (expanded) | 350 × 200 |
-| Subprocess (collapsed) | 100 × 80 |
-| Call Activity | 100 × 80 |
-| Pool | Height ≈ 250 на lane, Width 1200+ |
-| Lane | Height 180 типично |
-| Text Annotation | 180 × 60 |
-| Data Object / Store Reference | 36 × 50 |
+| `userTask`, `sendTask`, `serviceTask`, `businessRuleTask`, `scriptTask`, `manualTask` | 100 × 80 |
+| `subProcess` (collapsed) | 100 × 80 |
+| `subProcess` (expanded) | зависит от содержимого |
+| `callActivity` | 100 × 80 |
+| `startEvent`, `endEvent`, `intermediateCatchEvent`, `intermediateThrowEvent`, `boundaryEvent` | 36 × 36 |
+| `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | 50 × 50 |
+| `dataObject`, `dataObjectReference` | 36 × 50 |
+| `dataStoreReference` | 50 × 50 |
+| `textAnnotation` | flexible |
+| `participant` (pool) | flexible |
+| `lane` | flexible |
 
 ### 7.2 Пример BPMNShape для event
 
@@ -758,6 +761,12 @@ refresh_procedure: See README.md section "Refresh snapshot procedure"
 | userTask | `camunda:formKey` | Link на Camunda Form |
 | userTask | `camunda:dueDate` | Срок выполнения |
 | userTask | `camunda:priority` | 0..100 |
+| sendTask | `camunda:type="external"` | Тип external worker для отправки сообщения |
+| sendTask | `camunda:topic` | Topic для job worker |
+| sendTask | `camunda:class` | Internal Java class |
+| sendTask | `camunda:delegateExpression` | Internal Java bean |
+| sendTask | `camunda:expression` | EL expression |
+| sendTask | `camunda:resultVariable` | Имя var для результата |
 | serviceTask | `camunda:type="external"` | Тип external worker |
 | serviceTask | `camunda:topic` | Topic для job worker |
 | serviceTask | `camunda:delegateExpression` | Internal Java bean |
@@ -773,6 +782,32 @@ refresh_procedure: See README.md section "Refresh snapshot procedure"
 | всё | `camunda:async-before / -after` | Async continuations |
 | всё | `camunda:exclusive` | Exclusive lock job |
 | всё | `<bpmn:extensionElements>` | Контейнер для сложных ext: input/output mappings, execution listeners |
+
+### 9.1 Camunda 7 attribute compatibility matrix
+
+`unknown attribute` warnings в Camunda Modeler обычно означают, что `camunda:*` атрибут попал не на тот BPMN-элемент.
+
+| Атрибут | Допустимо на |
+|---|---|
+| `camunda:assignee` | userTask, manualTask* |
+| `camunda:candidateUsers` | userTask, manualTask* |
+| `camunda:candidateGroups` | userTask, manualTask* |
+| `camunda:dueDate` | userTask, manualTask* |
+| `camunda:followUpDate` | userTask, manualTask* |
+| `camunda:formKey` | userTask, startEvent |
+| `camunda:priority` | userTask, manualTask* |
+| `camunda:type` | serviceTask, sendTask, businessRuleTask |
+| `camunda:topic` | serviceTask, sendTask, businessRuleTask, scriptTask (when `camunda:type="external"`) |
+| `camunda:class` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:delegateExpression` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:expression` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:resultVariable` | serviceTask, sendTask, businessRuleTask, scriptTask |
+| `camunda:decisionRef` | businessRuleTask |
+| `camunda:mapDecisionResult` | businessRuleTask |
+| `camunda:resource` | scriptTask, businessRuleTask |
+| `camunda:calledElement` | callActivity |
+
+* `manualTask` only if you deliberately keep that legacy modeling pattern.
 
 ### Execution listeners (для audit / мониторинга)
 
