@@ -1,7 +1,7 @@
 ---
 name: bpmn-process-modeler
-description: Converts unstructured text descriptions of business processes (meeting transcripts, written narratives, process memos) into valid BPMN 2.0 XML for Camunda Platform 7, with all diagram labels in Russian and optional Excel process specification. Use whenever the user pastes a transcript, meeting notes, or prose describing a business process and asks to model, draw, map, diagram, or convert it into BPMN, Camunda, a .bpmn file, pools and lanes, or a process XML. Also use when the user wants an Excel specification table of a BPMN process. The skill pre-loads current Camunda documentation via the Camunda MCP server (search_camunda_knowledge_sources) before generating XML, validates the result against 7 structural and language checks, asks the user for approval, then optionally exports a 9-column UTF-8 Excel specification reconciled against the diagram across 9 parity checks.
-version: 2.2.0
+description: Converts prose, transcripts, notes, process memos, or mixed text + existing BPMN into valid BPMN 2.0 XML for Camunda Platform 7, with Russian labels and optional Excel specification. Use when the user asks to model, draw, map, diagram, convert to BPMN/Camunda/.bpmn/XML, create pools and lanes, export an Excel process table, уточни процесс перед моделированием, обнови существующий BPMN, дополни BPMN, расширь схему, or генерируй с допущениями. The skill classifies input, loads Camunda docs, validates XML, asks for approval, then exports a reconciled UTF-8 Excel specification.
+version: 2.3.0
 snapshot_version: 1.0
 snapshot_date: 2026-04-26
 snapshot_expiry: 2026-10-23
@@ -34,7 +34,16 @@ Violating any of these means the deliverable is broken. Treat them as preconditi
 
 ---
 
-## The workflow — 9 steps in fixed order
+## The workflow — Generate mode in fixed order
+
+### Step 0 — Input classification
+
+Classify the user input before loading Camunda knowledge or generating XML. Use
+`references/input-classification.md` as the routing source of truth.
+
+Route pure text to Generate, mixed text + BPMN/XML to Generate with reuse-ID,
+Camunda 8 / `zeebe:*` XML to REJECT with Diagram Converter guidance, unsupported
+formats to REJECT, and invalid XML to RECOVER or REJECT with the parse error.
 
 ### Step 1 — Load current Camunda documentation (with fallback)
 
@@ -67,6 +76,13 @@ At top of generated XML:
 > «Camunda MCP недоступен, и локальный knowledge snapshot не найден. Проверьте установку скилла (Settings → Capabilities → Skills → переустановите архив) и активацию Camunda MCP (Settings → Connectors, URL: https://camunda-docs.mcp.kapa.ai).»
 
 **In degraded mode (Option B):** proceed with the full workflow (Steps 2-9) as normal, but flag the degraded status in Step 7 approval prompt (see Step 7).
+
+### Step 1.5 — Clarification Wizard
+
+Placeholder for v2.3.0 Wizard integration. If Step 0 routes to Generate, run the
+Wizard only when process facts are missing; if nothing is missing, inform the
+user and proceed to Step 2. Full behavior is defined in
+`references/clarification-wizard.md` and filled in by T-105.
 
 ### Step 2 — Parse and classify the input
 
