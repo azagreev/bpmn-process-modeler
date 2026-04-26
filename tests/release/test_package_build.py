@@ -77,6 +77,25 @@ class PackageBuildTests(unittest.TestCase):
             )
             self.assertEqual(forbidden, [])
 
+    def test_fixtures_excluded_from_skill_package(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_path, _ = build_skill_package(temp_dir)
+
+            with zipfile.ZipFile(archive_path) as zf:
+                names = set(zf.namelist())
+
+            excluded_dirs = (
+                f"{PACKAGE_NAME}/tests/fixtures/wizard/",
+                f"{PACKAGE_NAME}/tests/fixtures/mixed_input/",
+                f"{PACKAGE_NAME}/tests/release/",
+            )
+            forbidden = sorted(
+                name
+                for name in names
+                if any(name.startswith(excluded) for excluded in excluded_dirs)
+            )
+            self.assertEqual(forbidden, [])
+
 
 if __name__ == "__main__":
     unittest.main()
