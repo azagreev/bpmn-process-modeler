@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:process id="Process_Order" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_Order" name="Заказ получен"/>
+    <bpmn:userTask id="Activity_CheckStock" name="Проверить наличие"/>
+    <bpmn:userTask id="Activity_ReserveStock" name="Зарезервировать товар"/>
+    <bpmn:serviceTask id="Activity_TakePayment" name="Списать оплату"/>
+    <bpmn:endEvent id="EndEvent_OrderPaid" name="Заказ оплачен"/>
+  </bpmn:process>
+</bpmn:definitions>

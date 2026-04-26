@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:process id="Process_BNPL" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_Request" name="Заявка получена"/>
+    <bpmn:userTask id="Activity_CheckDocs" name="Проверить документы"/>
+    <bpmn:serviceTask id="Activity_Score" name="Рассчитать скоринг"/>
+    <bpmn:exclusiveGateway id="Gateway_Decision" name="Решение?"/>
+    <bpmn:endEvent id="EndEvent_Approved" name="Заявка одобрена"/>
+  </bpmn:process>
+</bpmn:definitions>

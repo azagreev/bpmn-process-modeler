@@ -1,0 +1,6 @@
+{
+  "old_id": "Activity_SendAgreement",
+  "new_id": "Activity_SendAgreement_User",
+  "old_type": "task",
+  "new_type": "userTask"
+}

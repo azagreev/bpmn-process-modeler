@@ -1,0 +1,6 @@
+{
+  "preserved": ["StartEvent_Request", "Activity_CheckDocs", "Activity_Score", "Gateway_Decision", "EndEvent_Approved"],
+  "added": ["Activity_ManualReview", "Activity_NotifyClient"],
+  "removed": [],
+  "type_changed": []
+}

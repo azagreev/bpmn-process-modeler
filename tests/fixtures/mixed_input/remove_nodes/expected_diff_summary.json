@@ -1,0 +1,6 @@
+{
+  "preserved": ["StartEvent_Order", "Activity_CheckStock", "Activity_TakePayment", "EndEvent_OrderPaid"],
+  "added": [],
+  "removed": ["Activity_ReserveStock"],
+  "type_changed": []
+}
