@@ -1,0 +1,6 @@
+{
+  "preserved": ["StartEvent_DraftReady", "EndEvent_Sent"],
+  "added": ["Activity_SendAgreement_User"],
+  "removed": [],
+  "type_changed": ["Activity_SendAgreement"]
+}

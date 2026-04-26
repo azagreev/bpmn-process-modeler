@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:process id="Process_Signing" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_DraftReady" name="Проект готов"/>
+    <bpmn:task id="Activity_SendAgreement" name="Направить соглашение"/>
+    <bpmn:endEvent id="EndEvent_Sent" name="Соглашение направлено"/>
+  </bpmn:process>
+</bpmn:definitions>

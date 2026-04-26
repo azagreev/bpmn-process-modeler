@@ -28,6 +28,28 @@ Release tags must be signed with an SSH signing key registered on the releasing 
 
 ## Pre-release checklist
 
+### v2.3.0 — release date TBD
+
+Release scope:
+- Step 0 input classification
+- Clarification Wizard
+- Mixed input / Update scenario with reuse-ID
+- 5-level severity documentation
+- «Допущения» sheet in Excel template
+
+Required local checks:
+- `pytest tests/release/test_input_classification.py -v`
+- `pytest tests/release/test_wizard.py -v`
+- `pytest tests/release/test_mixed_input.py -v`
+- Snapshot freshness check passes: `snapshot_expiry=2026-10-23`, 179 days after 2026-04-27
+
+New v2.3.0 test modules:
+- `tests/release/test_input_classification.py`
+- `tests/release/test_wizard.py`
+- `tests/release/test_mixed_input.py`
+
+General checklist:
+
 1. Start from a clean `main` synchronized with `origin/main`.
 2. Create a release branch, for example `release/v2.0.2`.
 3. Make only release-scope changes: version, changelog, tests, CI, packaging, and release documentation.

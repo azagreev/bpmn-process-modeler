@@ -1,0 +1,6 @@
+{
+  "missing_categories": ["slas", "data_ownership"],
+  "questions_count": 2,
+  "expected_question_about": ["slas", "data_ownership"],
+  "wizard_invoked": true
+}

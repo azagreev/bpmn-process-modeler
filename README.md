@@ -4,7 +4,7 @@
 
 Скилл для Claude, который превращает неструктурированное описание процесса в читаемую BPMN 2.0 схему (Camunda 7, Platform) и — по запросу — в Excel-спецификацию, сверенную со схемой.
 
-**Версия:** 2.2.0
+**Версия:** 2.3.0
 **Автор:** Andrey Zagreev — [@zagreev](https://t.me/zagreev)
 **Лицензия:** [MIT](#лицензия)
 **Целевая платформа:** Camunda 7 (Platform)
@@ -70,8 +70,38 @@
 - «Вот описание процесса, нужна диаграмма с пулами»
 - «Преврати это в .bpmn файл»
 - «Нужна Excel-таблица по этому BPMN»
+- «Уточни процесс перед моделированием»
+- «Обнови существующий BPMN»
+- «Дополни BPMN»
+- «Расширь схему»
+- «Генерируй с допущениями»
 
 Не сработает на запросах про UML, sequence-диаграммы, ER-диаграммы, Mermaid, Excalidraw — у них своя специфика.
+
+В v2.3.0 режим по-прежнему один — Generate. Вход может быть двух типов:
+- **Text-only**: обычное описание процесса → Clarification Wizard → генерация новой BPMN-схемы.
+- **Mixed input**: текст + существующий `.bpmn` / XML → Generate with reuse-ID → сохранение прежних ID там, где смысл узлов не изменился.
+
+## Clarification Wizard
+
+Clarification Wizard — шаг перед генерацией BPMN. Он ищет недостающие факты по 6 категориям: topology, participants, happy_path, exception_paths, slas, data_ownership.
+
+Если пробелов нет, скилл сообщает «Всё понятно, перехожу к генерации». Если не хватает 1–5 фактов, задаёт короткие вопросы в приоритетном порядке. Если данных слишком мало или пользователь пишет «генерируй с допущениями», скилл продолжает без интервью и явно помечает принятые defaults через `⚠ Допущение:`.
+
+Подробные правила: [`references/clarification-wizard.md`](references/clarification-wizard.md).
+
+## Update scenario
+
+Если пользователь прикладывает существующий BPMN/XML и просит «обнови», «дополни», «измени» или «расширь существующий», скилл работает как Generate with reuse-ID.
+
+Правила:
+- неизменившиеся узлы сохраняют старые ID;
+- переименованные узлы с тем же типом и смыслом сохраняют ID;
+- новые узлы получают новые ID;
+- при смене типа, например `task` → `userTask`, старый ID не переиспользуется;
+- после генерации выводится diff-summary относительно исходного BPMN.
+
+Подробные правила: [`references/reuse-id-rules.md`](references/reuse-id-rules.md).
 
 ## Требования
 
@@ -115,8 +145,10 @@
 
 ## Как работает внутри (9 шагов)
 
+0. **Классификация входа** — text-only, mixed input, zeebe namespace, unsupported format или invalid XML
 1. **Загрузка документации Camunda** через MCP — синтаксис BPMN, extension-элементы, паттерны пулов, аннотации, сабпроцессы
-2. **Классификация входа** — отрасль, участники, активности, события, шлюзы, артефакты
+1.5. **Clarification Wizard** — уточнение недостающих фактов или явные `⚠ Допущение:` annotations
+2. **Классификация процесса** — отрасль, участники, активности, события, шлюзы, артефакты
 3. **Выбор топологии** по правилу: несколько организаций → collaboration с пулами; один бизнес с ролями → пул с лэйнами; один актёр → плоский процесс
 4. **Выбор декомпозиции** по правилу 7±2: больше 9 узлов или 2+ уровня вложенных шлюзов → overview + drill-down подпроцессы
 5. **Генерация BPMN XML** в UTF-8, с русскими подписями, BPMN DI, Camunda extensions, текстовыми аннотациями для SLA / регуляторки / открытых вопросов
@@ -144,6 +176,9 @@ bpmn-process-modeler/
     │   ├── public-sector-patterns.md    — государственная услуга (ФЗ-210)
     │   └── it-ops-patterns.md           — incident management, change management
     ├── annotation-style-guide.md        — когда использовать textAnnotation + шаблоны фраз на русском; отдельный подраздел про особенности аннотирования шлюзов (XOR / OR / event-based / parallel, default flow, FEEL-condition, вынесение логики в DMN)
+    ├── clarification-wizard.md          — правила Wizard: missing-facts categories, вопросы, assumption mode
+    ├── input-classification.md          — Step 0 routing: text-only, mixed input, rejects, invalid XML
+    ├── reuse-id-rules.md                — правила сохранения ID при обновлении существующего BPMN
     ├── validation-checklist.md          — 7 блокирующих проверок XML с Python-кодом + 10 рекомендательных best practices (на основе Camunda bpmnlint и docs)
     ├── excel-spec-template.md           — 9-колоночный шаблон + worked example на BNPL
     └── reconciliation-procedure.md      — 9 проверок сверки Excel и BPMN с openpyxl-кодом
@@ -216,6 +251,17 @@ bpmn-process-modeler/
 Рекомендуется итерировать на 2–3 реальных процессах из своей предметной области перед тем, как отдавать коллегам.
 
 ## Changelog
+
+### v2.3.0 — дата релиза TBD
+
+Wizard-only minor release.
+
+- Добавлен Step 0 input classification: text-only, mixed input, Camunda 8 / `zeebe:*` reject, unsupported formats, invalid XML recovery/reject.
+- Добавлен Clarification Wizard: 6 missing-facts categories, приоритет вопросов, hard limit 5 вопросов, режим генерации с допущениями.
+- Добавлен Update scenario для text + existing BPMN/XML: Generate with reuse-ID и diff-summary после генерации.
+- Validation checklist получил 5-level severity taxonomy: ERROR / TASK / REVIEW / WARNING / INFO.
+- Добавлен новый annotation prefix `⚠ Допущение:` отдельно от `⚠ Уточнить:`.
+- Excel template расширен листом «Допущения» для review принятых defaults.
 
 ### v2.2.0 — 26 апреля 2026
 

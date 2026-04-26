@@ -351,4 +351,47 @@ Camunda: "Avoid naming event-based gateways; avoid naming parallel gateways and 
 
 ---
 
+## Annotation prefix: ⚠ Допущение:
+
+Distinct from `⚠ Уточнить:` — used by Clarification Wizard for model-accepted assumptions.
+
+### Comparison
+
+| Prefix | When to use | Who fills |
+|---|---|---|
+| `⚠ Уточнить:` | Source has a gap or ambiguity that the model cannot resolve | Model leaves question to user |
+| `⚠ Допущение:` | Model has filled missing information using typical practice defaults | Model explicitly marks its choice |
+| `Примечание:` | Informational comment without call to action | For context only |
+
+### Rules for `⚠ Допущение:`
+
+1. Use only when the Wizard has accepted a missing fact via "with assumptions" mode OR when user skipped a Wizard question
+2. Always pair with `<bpmn:association>` linking annotation to target node
+3. Annotation text format: two lines minimum
+   - Line 1: `⚠ Допущение: <what was assumed>`
+   - Line 2+: justification ("В исходнике не указано / принято по типичной практике / etc.")
+4. ID format: `TextAnnotation_Assumption_<N>` where N is sequential per process
+
+### XML example
+
+```xml
+<bpmn:textAnnotation id="TextAnnotation_Assumption_3">
+  <bpmn:text>⚠ Допущение: SLA на ручную проверку — 24 часа.
+В исходнике срок не указан, принят по типичной банковской практике.</bpmn:text>
+</bpmn:textAnnotation>
+
+<bpmn:association id="Association_Assumption_3"
+  sourceRef="Activity_Manual_Review"
+  targetRef="TextAnnotation_Assumption_3"/>
+```
+
+### When NOT to mark as Допущение
+
+- Trivially derivable from context (task type from verb)
+- Standard BPMN conventions (start event begins process)
+- Explicitly stated facts in the source text
+- Meta-information about model's working approach
+
+---
+
 **Этот гайд обязателен к использованию в Step 5 (генерация XML) и Step 6 (валидация).** Если аннотация в модели отклоняется от шаблонов и правил этого документа — это WARN при валидации, требующий либо коррекции, либо явного обоснования в отчёте.

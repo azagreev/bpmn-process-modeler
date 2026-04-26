@@ -1,7 +1,7 @@
 ---
 name: bpmn-process-modeler
-description: Converts unstructured text descriptions of business processes (meeting transcripts, written narratives, process memos) into valid BPMN 2.0 XML for Camunda Platform 7, with all diagram labels in Russian and optional Excel process specification. Use whenever the user pastes a transcript, meeting notes, or prose describing a business process and asks to model, draw, map, diagram, or convert it into BPMN, Camunda, a .bpmn file, pools and lanes, or a process XML. Also use when the user wants an Excel specification table of a BPMN process. The skill pre-loads current Camunda documentation via the Camunda MCP server (search_camunda_knowledge_sources) before generating XML, validates the result against 7 structural and language checks, asks the user for approval, then optionally exports a 9-column UTF-8 Excel specification reconciled against the diagram across 9 parity checks.
-version: 2.2.0
+description: Converts prose, transcripts, notes, process memos, or mixed text + existing BPMN into valid BPMN 2.0 XML for Camunda Platform 7, with Russian labels and optional Excel specification. Use when the user asks to model, draw, map, diagram, convert to BPMN/Camunda/.bpmn/XML, create pools and lanes, export an Excel process table, уточни процесс перед моделированием, обнови существующий BPMN, дополни BPMN, расширь схему, or генерируй с допущениями. The skill classifies input, loads Camunda docs, runs the Wizard when needed, validates XML, asks for approval, then exports a reconciled UTF-8 Excel specification.
+version: 2.3.0
 snapshot_version: 1.0
 snapshot_date: 2026-04-26
 snapshot_expiry: 2026-10-23
@@ -34,7 +34,34 @@ Violating any of these means the deliverable is broken. Treat them as preconditi
 
 ---
 
-## The workflow — 9 steps in fixed order
+## The workflow — Generate mode in fixed order
+
+### Step 0 — Input classification
+
+Classify the user input before loading Camunda knowledge or generating XML. Use
+`references/input-classification.md` as the routing source of truth.
+
+Route pure text to Generate, mixed text + BPMN/XML to Generate with reuse-ID,
+Camunda 8 / `zeebe:*` XML to REJECT with Diagram Converter guidance, unsupported
+formats to REJECT, and invalid XML to RECOVER or REJECT with the parse error.
+
+#### Update scenario (mixed input)
+
+When Step 0 detects mixed input (text + .bpmn), workflow becomes:
+
+1. Step 0: detected as mixed input
+2. Reuse-ID extraction: parse old BPMN, build ID index
+3. Step 1: Camunda knowledge load (unchanged)
+4. Step 1.5: Wizard runs only on new/changed parts (per `references/reuse-id-rules.md`)
+5. Steps 2-9: generate new BPMN preserving existing IDs where appropriate
+6. Output:
+   - Final BPMN (with reused + new IDs)
+   - Excel spec (per existing template, +«Допущения» sheet if applicable)
+   - Diff-summary text block (see reuse-id-rules.md)
+
+**Cross-references:**
+- `references/reuse-id-rules.md` — full ID reuse rules
+- `references/clarification-wizard.md` — Wizard behavior in Update scenario
 
 ### Step 1 — Load current Camunda documentation (with fallback)
 
@@ -67,6 +94,33 @@ At top of generated XML:
 > «Camunda MCP недоступен, и локальный knowledge snapshot не найден. Проверьте установку скилла (Settings → Capabilities → Skills → переустановите архив) и активацию Camunda MCP (Settings → Connectors, URL: https://camunda-docs.mcp.kapa.ai).»
 
 **In degraded mode (Option B):** proceed with the full workflow (Steps 2-9) as normal, but flag the degraded status in Step 7 approval prompt (see Step 7).
+
+### Step 1.5 — Clarification Wizard
+
+Run the Wizard after Camunda knowledge is available and before parsing the
+process into BPMN elements. Use `references/clarification-wizard.md` as the
+source of truth.
+
+Branching:
+- If 0 missing facts are detected: skip Wizard, inform user "Всё понятно, перехожу к генерации", proceed to Step 2.
+- If 1-5 missing facts are detected: ask targeted questions in priority order, then proceed to Step 2.
+- If 6+ missing facts are detected: offer more detail or "with assumptions" mode, then proceed to Step 2.
+
+Assumption mode trigger phrases include "делай с допущениями", "генерируй с предположениями", "не задавай вопросов", "as is", "as-is", and "just do it".
+
+#### Discipline rules for Wizard (Step 1.5)
+
+**Do NOT:**
+- Ask questions when answer is in the source text (anti-hallucination)
+- Mark as `⚠ Допущение:` what is trivially derivable (e.g., task type from verb)
+- Ask more than 5 questions in one pass
+- Skip Wizard silently — always inform user "Всё понятно, перехожу к генерации"
+
+**Do:**
+- Detect all 6 categories before deciding routing
+- Respect priority order (topology first, data_ownership last)
+- Use category default if user skips ("не знаю / пропустить")
+- Mark every accepted assumption with `⚠ Допущение:` annotation + Excel row
 
 ### Step 2 — Parse and classify the input
 
