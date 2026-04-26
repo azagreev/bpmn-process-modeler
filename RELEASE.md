@@ -41,7 +41,7 @@ Required local checks:
 - `pytest tests/release/test_input_classification.py -v`
 - `pytest tests/release/test_wizard.py -v`
 - `pytest tests/release/test_mixed_input.py -v`
-- Snapshot freshness check passes
+- Snapshot freshness check passes: `snapshot_expiry=2026-10-23`, 179 days after 2026-04-27
 
 General checklist:
 
