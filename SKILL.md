@@ -45,6 +45,24 @@ Route pure text to Generate, mixed text + BPMN/XML to Generate with reuse-ID,
 Camunda 8 / `zeebe:*` XML to REJECT with Diagram Converter guidance, unsupported
 formats to REJECT, and invalid XML to RECOVER or REJECT with the parse error.
 
+#### Update scenario (mixed input)
+
+When Step 0 detects mixed input (text + .bpmn), workflow becomes:
+
+1. Step 0: detected as mixed input
+2. Reuse-ID extraction: parse old BPMN, build ID index
+3. Step 1: Camunda knowledge load (unchanged)
+4. Step 1.5: Wizard runs only on new/changed parts (per `references/reuse-id-rules.md`)
+5. Steps 2-9: generate new BPMN preserving existing IDs where appropriate
+6. Output:
+   - Final BPMN (with reused + new IDs)
+   - Excel spec (per existing template, +«Допущения» sheet if applicable)
+   - Diff-summary text block (see reuse-id-rules.md)
+
+**Cross-references:**
+- `references/reuse-id-rules.md` — full ID reuse rules
+- `references/clarification-wizard.md` — Wizard behavior in Update scenario
+
 ### Step 1 — Load current Camunda documentation (with fallback)
 
 Before producing any BPMN XML, acquire Camunda knowledge. Try in order:
