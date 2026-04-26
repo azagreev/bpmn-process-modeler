@@ -1,0 +1,6 @@
+{
+  "missing_categories": ["topology", "participants", "exception_paths", "slas", "data_ownership"],
+  "questions_count": 5,
+  "expected_priority_order": ["topology", "participants", "exception_paths", "slas", "data_ownership"],
+  "wizard_invoked": true
+}

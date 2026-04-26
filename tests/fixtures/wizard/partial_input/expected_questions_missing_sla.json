@@ -1,0 +1,6 @@
+{
+  "missing_categories": ["slas"],
+  "questions_count": 1,
+  "expected_question_about": "slas",
+  "wizard_invoked": true
+}

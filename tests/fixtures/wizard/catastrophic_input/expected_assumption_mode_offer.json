@@ -1,0 +1,6 @@
+{
+  "missing_categories": ["topology", "participants", "happy_path", "exception_paths", "slas", "data_ownership"],
+  "questions_count": 0,
+  "wizard_invoked": false,
+  "offer_assumption_mode": true
+}
