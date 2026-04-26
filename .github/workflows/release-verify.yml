@@ -1,0 +1,127 @@
+name: Release Verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify, for example v2.0.1"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Validate tag input
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Expected semantic release tag like v2.0.1, got: $TAG"; exit 1 ;;
+          esac
+
+      - name: Verify tag signature
+        run: |
+          set -euo pipefail
+          tag_ref_json="$(mktemp)"
+          gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" > "$tag_ref_json"
+
+          tag_object_sha="$(python3 - "$tag_ref_json" <<'PY'
+          import json
+          import sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          obj = data["object"]
+          if obj["type"] != "tag":
+              raise SystemExit(f"Expected annotated tag object, got {obj['type']}")
+          print(obj["sha"])
+          PY
+          )"
+
+          tag_json="$(mktemp)"
+          gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_object_sha}" > "$tag_json"
+
+          python3 - "$tag_json" "$TAG" <<'PY'
+          import json
+          import sys
+
+          tag = sys.argv[2]
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          failures = []
+
+          if data.get("tag") != tag:
+              failures.append(f"tag name mismatch: {data.get('tag')} != {tag}")
+          if data.get("object", {}).get("type") != "commit":
+              failures.append(f"tag target is not a commit: {data.get('object', {}).get('type')}")
+          tagger = data.get("tagger", {})
+          if tagger.get("email") != "a.zagreev@gmail.com":
+              failures.append(f"unexpected tagger email: {tagger.get('email')}")
+          verification = data.get("verification", {})
+          if verification.get("verified") is not True:
+              failures.append(f"tag is not verified: {verification}")
+          if verification.get("reason") != "valid":
+              failures.append(f"tag verification reason is not valid: {verification.get('reason')}")
+
+          if failures:
+              raise SystemExit("\n".join(failures))
+
+          print(f"Verified tag {tag} -> {data['object']['sha']}")
+          PY
+
+      - name: Verify GitHub Release
+        run: |
+          set -euo pipefail
+          release_json="$(mktemp)"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" > "$release_json"
+
+          python3 - "$release_json" <<'PY'
+          import json
+          import sys
+
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          failures = []
+          if data.get("draft") is not False:
+              failures.append("release is draft")
+          if data.get("prerelease") is not False:
+              failures.append("release is prerelease")
+
+          assets = data.get("assets", [])
+          matching = [asset for asset in assets if asset.get("name") == "bpmn-process-modeler.skill"]
+          if len(matching) != 1:
+              failures.append(f"expected one bpmn-process-modeler.skill asset, found {len(matching)}")
+          elif matching[0].get("state") != "uploaded":
+              failures.append(f"asset state is not uploaded: {matching[0].get('state')}")
+
+          if failures:
+              raise SystemExit("\n".join(failures))
+
+          print(f"Verified release asset size: {matching[0]['size']} bytes")
+          PY
+
+      - name: Download and verify skill asset
+        run: |
+          set -euo pipefail
+          mkdir -p release-verify
+          gh release download "$TAG" \
+            -R "$GITHUB_REPOSITORY" \
+            -p bpmn-process-modeler.skill \
+            -D release-verify \
+            --clobber
+
+          unzip -t release-verify/bpmn-process-modeler.skill
+          unzip -l release-verify/bpmn-process-modeler.skill | grep 'bpmn-process-modeler/SKILL.md'
+          unzip -l release-verify/bpmn-process-modeler.skill | grep 'bpmn-process-modeler/README.md'
+          unzip -l release-verify/bpmn-process-modeler.skill | grep 'bpmn-process-modeler/LICENSE'
+          unzip -l release-verify/bpmn-process-modeler.skill | grep 'bpmn-process-modeler/CONTRIBUTING.md'
+          unzip -l release-verify/bpmn-process-modeler.skill | grep 'bpmn-process-modeler/SECURITY.md'
+          unzip -l release-verify/bpmn-process-modeler.skill | grep 'bpmn-process-modeler/references/camunda-knowledge-snapshot.md'
+
+          expected_version="${TAG#v}"
+          actual_version="$(unzip -p release-verify/bpmn-process-modeler.skill bpmn-process-modeler/SKILL.md | awk -F': ' '/^version:/ {print $2; exit}')"
+          test "$actual_version" = "$expected_version"
+          sha256sum release-verify/bpmn-process-modeler.skill

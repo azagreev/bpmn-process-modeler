@@ -3,7 +3,7 @@ import subprocess
 import tempfile
 import unittest
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -46,6 +46,9 @@ class PackageBuildTests(unittest.TestCase):
             with zipfile.ZipFile(archive_path) as zf:
                 names = set(zf.namelist())
 
+            top_level = {PurePosixPath(name).parts[0] for name in names if name}
+            self.assertEqual(top_level, {PACKAGE_NAME})
+
             required = {
                 f"{PACKAGE_NAME}/SKILL.md",
                 f"{PACKAGE_NAME}/README.md",
@@ -64,6 +67,15 @@ class PackageBuildTests(unittest.TestCase):
                 and name.endswith(".md")
             )
             self.assertEqual(len(industry_files), 8, industry_files)
+
+            forbidden = sorted(
+                name
+                for name in names
+                if name.startswith(f"{PACKAGE_NAME}/tests/")
+                or "__pycache__" in PurePosixPath(name).parts
+                or name.endswith(".pyc")
+            )
+            self.assertEqual(forbidden, [])
 
 
 if __name__ == "__main__":
