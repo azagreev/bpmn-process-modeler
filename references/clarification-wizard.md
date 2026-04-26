@@ -30,7 +30,7 @@ Output of the Wizard:
 Priority order is fixed: topology, participants, happy_path, exception_paths,
 slas, data_ownership.
 
-### 3.1 Topology (priority 1, high)
+### Category 1: topology (priority: high)
 
 **Trigger words for detection:**
 - отдел
@@ -44,9 +44,12 @@ slas, data_ownership.
 - lane
 
 **Detection heuristic:**
-Topology is missing if the text does not reveal whether the process has one
+Category is "missing" if the text does not reveal whether the process has one
 organization, several internal roles, or multiple organizations exchanging
 messages.
+
+Category is "present" if pools, lanes, organizations, departments, or message
+exchange boundaries are explicitly described.
 
 **Default assumption (if user skips):**
 Single pool, no collaboration.
@@ -58,7 +61,7 @@ Single pool, no collaboration.
 - Option C: Несколько пулов с message flows
 - Free-form: "Другое: ___"
 
-### 3.2 Participants (priority 2, high)
+### Category 2: participants (priority: high)
 
 **Trigger words for detection:**
 - менеджер
@@ -72,8 +75,11 @@ Single pool, no collaboration.
 - регулятор
 
 **Detection heuristic:**
-Participants are missing if the process describes actions but does not name who
-or what performs them.
+Category is "missing" if the process describes actions but does not name who or
+what performs them.
+
+Category is "present" if each major action has an actor, role, department,
+system, customer, partner, or regulator.
 
 **Default assumption (if user skips):**
 Use placeholder participant "Внутренний исполнитель".
@@ -85,7 +91,7 @@ Use placeholder participant "Внутренний исполнитель".
 - Option C: Внутренний отдел + внешняя система
 - Free-form: "Другое: ___"
 
-### 3.3 Happy path (priority 3, high)
+### Category 3: happy_path (priority: high)
 
 **Trigger words for detection:**
 - сначала
@@ -99,8 +105,11 @@ Use placeholder participant "Внутренний исполнитель".
 - одобрено
 
 **Detection heuristic:**
-Happy path is missing if the text names a process goal but does not describe the
+Category is "missing" if the text names a process goal but does not describe the
 main successful sequence from start to end.
+
+Category is "present" if the input gives an ordered sequence of successful
+states, tasks, or handoffs.
 
 **Default assumption (if user skips):**
 Linear sequence, single end event.
@@ -112,7 +121,7 @@ Linear sequence, single end event.
 - Option C: Параллельная подготовка нескольких материалов → объединение
 - Free-form: "Другое: ___"
 
-### 3.4 Exception paths (priority 4, medium)
+### Category 4: exception_paths (priority: medium)
 
 **Trigger words for detection:**
 - если не
@@ -126,8 +135,11 @@ Linear sequence, single end event.
 - недоступен
 
 **Detection heuristic:**
-Exception paths are missing if the text has only the happy path and does not say
-what happens on rejection, timeout, validation failure, or unavailable system.
+Category is "missing" if the text has only the happy path and does not say what
+happens on rejection, timeout, validation failure, or unavailable system.
+
+Category is "present" if at least one rejection, timeout, cancellation,
+escalation, or error path is described.
 
 **Default assumption (if user skips):**
 No alternative path; process ends on error or rejection.
@@ -139,7 +151,7 @@ No alternative path; process ends on error or rejection.
 - Option C: Таймаут + повторная попытка
 - Free-form: "Другое: ___"
 
-### 3.5 SLAs (priority 5, medium)
+### Category 5: slas (priority: medium)
 
 **Trigger words for detection:**
 - срок
@@ -153,8 +165,11 @@ No alternative path; process ends on error or rejection.
 - просрочка
 
 **Detection heuristic:**
-SLAs are missing if the process contains manual or waiting steps but no explicit
-time limits, deadlines, or timeout behavior.
+Category is "missing" if the process contains manual or waiting steps but no
+explicit time limits, deadlines, or timeout behavior.
+
+Category is "present" if the source gives deadlines, durations, timeout rules,
+business-day limits, or explicit "no SLA" wording.
 
 **Default assumption (if user skips):**
 Use "По регламенту" with no specific timer.
@@ -166,7 +181,7 @@ Use "По регламенту" with no specific timer.
 - Option C: 3 рабочих дня на полный цикл
 - Free-form: "Другое: ___"
 
-### 3.6 Data ownership (priority 6, low)
+### Category 6: data_ownership (priority: low)
 
 **Trigger words for detection:**
 - документ
@@ -180,8 +195,11 @@ Use "По регламенту" with no specific timer.
 - система
 
 **Detection heuristic:**
-Data ownership is missing if documents or data objects are mentioned but no
-source system, owner, or storage point is specified.
+Category is "missing" if documents or data objects are mentioned but no source
+system, owner, or storage point is specified.
+
+Category is "present" if documents, files, records, or process variables have a
+named owner, source system, or storage location.
 
 **Default assumption (if user skips):**
 Source system not specified.
