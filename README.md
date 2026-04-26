@@ -4,7 +4,7 @@
 
 Скилл для Claude, который превращает неструктурированное описание процесса в читаемую BPMN 2.0 схему (Camunda 7, Platform) и — по запросу — в Excel-спецификацию, сверенную со схемой.
 
-**Версия:** 2.0.2
+**Версия:** 2.2.0
 **Автор:** Andrey Zagreev — [@zagreev](https://t.me/zagreev)
 **Лицензия:** [MIT](#лицензия)
 **Целевая платформа:** Camunda 7 (Platform)
@@ -216,6 +216,16 @@ bpmn-process-modeler/
 Рекомендуется итерировать на 2–3 реальных процессах из своей предметной области перед тем, как отдавать коллегам.
 
 ## Changelog
+
+### v2.2.0 — 26 апреля 2026
+
+Rules and release-notes alignment patch.
+
+- Добавлены правила выбора BPMN-типа задачи до навешивания Camunda extension attributes, чтобы не получать `unknown attribute` warnings в Camunda Modeler.
+- Добавлены правила по naming, granularity, documentation и glossary annotations для более читаемых диаграмм.
+- `validation-checklist.md`, `bpmn-patterns.md` и `camunda-knowledge-snapshot.md` синхронизированы с новой матрицей совместимости атрибутов и обновлённым fallback snapshot.
+- Формат дат в changelog переведён на полный человекочитаемый вид `день месяц год` для всех видимых релизных секций.
+- Поведение генерации BPMN, валидации и Excel-выгрузки не изменялось.
 
 ### v2.0.2 — 26 апреля 2026
 
