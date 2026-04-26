@@ -69,6 +69,147 @@
 
 ---
 
+## Sheet 4: Допущения (Assumptions)
+
+### Purpose
+
+Review checklist for the user: what the model assumed during Clarification Wizard or "with assumptions" mode. Each row = one explicitly accepted assumption, synchronized with `<bpmn:textAnnotation>` in BPMN-XML via ID.
+
+### When the sheet is generated
+
+| Scenario | Sheet generated? |
+|---|---|
+| Wizard NOT invoked (0 missing facts) | No |
+| Wizard invoked, all questions answered | No |
+| Wizard invoked, ≥1 answer was "skip" | Yes |
+| "With assumptions" mode activated | Yes |
+| Update scenario, Wizard refined only additions | Yes |
+
+**Rule:** if final assumption count = 0 — sheet is NOT created (no empty sheets).
+
+### Column structure
+
+| # | Column | Type | Required | Example | Purpose |
+|---|---|---|---|---|---|
+| 1 | `ID допущения` | text | yes | `Assumption_3` | Maps to `<bpmn:textAnnotation>` in XML |
+| 2 | `Целевой узел BPMN` | text | yes | `Activity_Manual_Review` | ID of node the assumption applies to |
+| 3 | `Тип целевого узла` | enum | yes | `userTask` | task / userTask / serviceTask / gateway / event / pool / lane / process |
+| 4 | `Категория` | enum | yes | `slas` | One of 6: topology / participants / happy_path / exception_paths / slas / data_ownership |
+| 5 | `Текст допущения` | text | yes | "SLA на ручную проверку — 24 часа" | What was assumed |
+| 6 | `Обоснование` | text | yes | "В исходнике срок не указан, принят default из category SLA" | Why this value |
+| 7 | `Risk` | enum | yes | `medium` | low / medium / high (per Risk model below) |
+| 8 | `Источник default'а` | text | **no (optional)** | `clarification-wizard.md §3.4` | Reference where default was taken |
+| 9 | `Статус ревью` | enum | yes | `pending` | Always pre-fills to `pending`. User updates: pending / accepted / rejected / modified |
+
+### Excel formatting
+
+- Header row: bold, fill `#efeae0`
+- `Risk = high` rows: cell fill `#fde2e2` (light red) on Risk column
+- `Risk = medium` rows: cell fill `#fff3d6` (light gold) on Risk column
+- `Risk = low` rows: no fill
+- Columns 5 and 6: wrap text, width 40
+- Column 9 (Статус ревью): data validation dropdown with 4 values
+- Freeze pane: row 1
+
+### BPMN reconciliation
+
+ID mapping rule: Excel `Assumption_N` ↔ BPMN `TextAnnotation_Assumption_N`.
+
+Example:
+
+```xml
+<bpmn:textAnnotation id="TextAnnotation_Assumption_3">
+  <bpmn:text>⚠ Допущение: SLA на ручную проверку — 24 часа.
+В исходнике срок не указан, принят по типичной практике.</bpmn:text>
+</bpmn:textAnnotation>
+
+<bpmn:association id="Association_Assumption_3"
+  sourceRef="Activity_Manual_Review"
+  targetRef="TextAnnotation_Assumption_3"/>
+```
+
+| Excel column | XML location |
+|---|---|
+| `ID допущения` | `textAnnotation/@id` (without `TextAnnotation_` prefix) |
+| `Целевой узел BPMN` | `association/@sourceRef` |
+| `Тип целевого узла` | derived from BPMN element with `id=sourceRef` |
+| `Текст допущения` | line 1 of `textAnnotation/text/text()` (after `⚠ Допущение:` prefix) |
+| `Обоснование` | line 2+ of `textAnnotation/text/text()` |
+| `Категория`, `Risk`, `Источник default'а`, `Статус ревью` | Excel-only (not in BPMN) |
+
+### Risk model
+
+**Default Risk by category** + override conditions:
+
+| Category | Default Risk | Override → high | Override → medium | Override → low |
+|---|---|---|---|---|
+| topology | high | external partner assumed | — | name-only assumption (no structural change) |
+| participants | medium | external partner / regulator | — | — |
+| happy_path | medium | entire step invented (not in source) | — | — |
+| exception_paths | high | — | only missing escalation path | — |
+| slas | medium | SLA <1h or >7d (atypical) | — | — |
+| data_ownership | low | PII/KYC data | — | — |
+
+**Risk meaning:** "how much BPMN to redo if this assumption is wrong" + "is there compliance/regulatory risk".
+
+**Rule:** if 30%+ of assumptions are `Risk = high` — model must warn user in final message: "Высокая концентрация high-risk допущений. Рекомендую запустить Wizard повторно с расширенным вводом."
+
+### Sheet template (5-row example)
+
+| ID | Целевой узел | Тип | Категория | Текст допущения | Обоснование | Risk | Источник | Статус |
+|---|---|---|---|---|---|---|---|---|
+| Assumption_1 | Pool_BNPL_Operator | pool | participants | Operator — внутренний отдел операционного риска | В тексте упомянут "оператор", конкретный отдел не указан | medium | clarification-wizard.md §3.2 | pending |
+| Assumption_2 | Activity_Document_Verify | userTask | participants | Документы проверяет junior credit officer | Не указан исполнитель, default из category participants | low | clarification-wizard.md §3.2 | pending |
+| Assumption_3 | Activity_Manual_Review | userTask | slas | SLA на ручную проверку — 24 часа | Срок не указан, default из category SLA | medium | clarification-wizard.md §3.5 | pending |
+| Assumption_4 | Gateway_Risk_Score | exclusiveGateway | exception_paths | При rejected → process end (без эскалации) | Не описан альтернативный путь, выбран наиболее частый сценарий | high | clarification-wizard.md §3.4 | pending |
+| Assumption_5 | DataObject_Loan_Application | dataObject | data_ownership | Owner объекта — система LOS | Owner не указан, по контексту определена как LOS | low | clarification-wizard.md §3.6 | pending |
+
+### Edge cases
+
+**E1. Assumption about absence of element.** `Целевой узел` = main gateway where alternative path was expected. Text: "Альтернативный путь после Gateway_X не предусмотрен."
+
+**E2. Process-level assumption (no specific node).** `Целевой узел` = `(process root)`, `Тип` = `process`. In BPMN: `<bpmn:textAnnotation>` without `<bpmn:association>` (or association on the root process element).
+
+**E3. Cascading assumptions.** If one assumption produces another ("Operator = internal department" → "Operator has access to LOS"), record as 2 separate rows. Second row's `Обоснование` references first: "Следствие из Assumption_1."
+
+**E4. Assumption rejected after generation.** User changes `Статус ревью` to `rejected`. Does NOT trigger automatic regeneration. Reconciliation report shows warning: "Assumption_3 rejected — требуется регенерация процесса с уточнённым SLA."
+
+### Changes to other sheets when «Допущения» exists
+
+**Sheet 1 (Спецификация):** add (optional) column "Связанные допущения" — list of Assumption_N IDs affecting this row. Format: `Assumption_1, Assumption_3`. Empty if none.
+
+**Sheet 2 (Участники):** if a participant comes from a `participants`-category assumption, add row with `Источник` column = `Допущение: Assumption_N`.
+
+**Sheet 3 (Открытые вопросы):** do NOT duplicate assumption content. Open questions = unresolved gaps in source. Assumptions = facts model accepted on user's behalf. Different entities.
+
+### Reconciliation checks (extends `references/reconciliation-procedure.md`)
+
+| # | Check | Violation | Severity |
+|---|---|---|---|
+| R-10 | Each row in «Допущения» has matching `<bpmn:textAnnotation>` in BPMN | Allegation without annotation | ERROR |
+| R-11 | Each `<bpmn:textAnnotation>` with `⚠ Допущение:` prefix has Excel row | Annotation without record | ERROR |
+| R-12 | `Целевой узел BPMN` exists in schema (id from `association.sourceRef` resolves) | Assumption points to nonexistent node | ERROR |
+| R-13 | `Тип целевого узла` in Excel matches actual BPMN element type | Type mismatch | WARNING |
+
+### Anti-hallucination rules
+
+**Do NOT include in «Допущения»:**
+- Facts explicitly stated in source
+- Trivially derivable from context (task type from verb)
+- Standard BPMN conventions
+- Meta-information about model's working approach
+
+**Do include:**
+- Any SLA not in source but present in BPMN
+- Any assumed executor/role
+- Any alternative path not described
+- Any assumed data owner
+- Any topology assumption (single vs collaboration)
+
+**Control question for the model:** "If user rejects this assumption now, what in BPMN must change?" If answer is "nothing" → don't add. If "≥1 element" → add.
+
+---
+
 ## Mapping: BPMN element → row content
 
 Таблица соответствий, чтобы заполнение колонок было одинаковым для одинаковых элементов.
