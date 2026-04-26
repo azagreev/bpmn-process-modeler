@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Run release tests
+        run: python -m unittest discover -s tests/release -v
+
       - name: Package skill archive
         run: |
           STAGE="bpmn-process-modeler"
@@ -26,9 +29,12 @@ jobs:
       - name: Verify skill archive
         run: |
           unzip -t bpmn-process-modeler.skill
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/SKILL.md'
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/README.md'
           unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/LICENSE'
           unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/CONTRIBUTING.md'
           unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/SECURITY.md'
+          unzip -l bpmn-process-modeler.skill | grep 'bpmn-process-modeler/references/camunda-knowledge-snapshot.md'
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
