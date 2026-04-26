@@ -217,7 +217,7 @@ bpmn-process-modeler/
 
 ## Changelog
 
-### v2.0.2 — апрель 2026
+### v2.0.2 — 26 апреля 2026
 
 Release hardening patch.
 
@@ -227,7 +227,7 @@ Release hardening patch.
 - Поведение повторной загрузки release asset сделано явным: `overwrite_files: true`, `fail_on_unmatched_files: true`; повторный tag push разрешён только для явного release repair без смены target commit.
 - Поведение BPMN-генерации, валидации и Excel-выгрузки не изменялось.
 
-### v2.0.1 — апрель 2026
+### v2.0.1 — 26 апреля 2026
 
 Release hygiene patch.
 
@@ -237,7 +237,7 @@ Release hygiene patch.
 - Dry-run `.skill` прикрепляется к каждому CI-run как артефакт для визуальной проверки состава.
 - Поведение BPMN-генерации, валидации и Excel-выгрузки не изменялось.
 
-### v2.0 — апрель 2026
+### v2.0 — 25 апреля 2026
 
 Поддерживаемый публичный релиз с воспроизводимым `.skill`-артефактом и полной релизной документацией.
 
@@ -281,7 +281,7 @@ Compliance-рамка покрывает: РФ (115-ФЗ, 353-ФЗ, 161-ФЗ, 10
 
 Артефакт `bpmn-process-modeler.skill` собирается автоматически через GitHub Actions (`.github/workflows/build-skill.yml`) при push любого тега `v*` и публикуется в GitHub Release.
 
-### v1.1 — апрель 2026
+### v1.1 — 24 апреля 2026
 
 Отказоустойчивость при недоступности Camunda MCP + методология построения в snapshot.
 
@@ -292,7 +292,7 @@ Compliance-рамка покрывает: РФ (115-ФЗ, 353-ФЗ, 161-ФЗ, 10
 - Step 7 получил явный warning в degraded mode — перед approval prompt выводится сообщение про использование snapshot и рекомендации для prod-деплоя
 - В README добавлены секции «Refresh snapshot procedure» (инструкция ручного обновления раз в 6 месяцев) и обновлённый troubleshooting по MCP
 
-### v1.0 — апрель 2026
+### v1.0 — 24 апреля 2026
 Первый публичный релиз.
 
 - 9-шаговый workflow: Camunda MCP → классификация → топология → декомпозиция → XML → валидация → показ → Excel → reconciliation

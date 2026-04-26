@@ -1,9 +1,9 @@
 ---
 name: bpmn-process-modeler
 description: Converts unstructured text descriptions of business processes (meeting transcripts, written narratives, process memos) into valid BPMN 2.0 XML for Camunda Platform 7, with all diagram labels in Russian and optional Excel process specification. Use whenever the user pastes a transcript, meeting notes, or prose describing a business process and asks to model, draw, map, diagram, or convert it into BPMN, Camunda, a .bpmn file, pools and lanes, or a process XML. Also use when the user wants an Excel specification table of a BPMN process. The skill pre-loads current Camunda documentation via the Camunda MCP server (search_camunda_knowledge_sources) before generating XML, validates the result against 7 structural and language checks, asks the user for approval, then optionally exports a 9-column UTF-8 Excel specification reconciled against the diagram across 9 parity checks.
-version: 2.0.2
+version: 2.2.0
 snapshot_version: 1.0
-snapshot_date: 2026-04-23
+snapshot_date: 2026-04-26
 snapshot_expiry: 2026-10-23
 min_claude_version: "4.6"
 requires_mcp: "camunda-docs.mcp.kapa.ai"
@@ -59,7 +59,7 @@ At top of generated XML:
 
 At top of generated XML:
 ```xml
-<!-- Camunda knowledge: snapshot v1.0 (2026-04-23), MCP unavailable. Before prod deploy, verify critical elements against live docs. -->
+<!-- Camunda knowledge: snapshot v1.0 (2026-04-26), MCP unavailable. Before prod deploy, verify critical elements against live docs. -->
 ```
 
 **Option C — HALT (extremely rare).** If neither MCP nor snapshot available (snapshot file missing from archive — indicates a broken installation):
@@ -130,7 +130,33 @@ Mandatory elements in every XML:
 - Complete `<bpmndi:BPMNDiagram>` with coordinates for every flow node, sequence/message flow, text annotation, and association
 - Unique IDs following the convention: `Activity_<verb>`, `Gateway_<decision>`, `Event_<trigger>`, `Flow_<from>_<to>`, `Participant_<org>`, `Lane_<role>`, `TextAnnotation_<n>`, `Association_<n>`
 - `name` attributes in Russian on every semantic element
-- Camunda 7 extensions where applicable:
+- Before attaching Camunda extensions, choose the BPMN task type by real business semantics. A mismatch between task type and extensions causes `unknown attribute` warnings in Camunda Modeler.
+
+| Semantics | BPMN type | Allowed `camunda:*` attributes |
+|---|---|---|
+| Human performs the work by hand, approves, checks, signs, or sends email manually | `userTask` | `assignee`, `candidateUsers`, `candidateGroups`, `dueDate`, `followUpDate`, `formKey`, `priority` |
+| Automatic message send to an external participant | `sendTask` | `camunda:type="external"` + `camunda:topic`, `camunda:class`, `camunda:delegateExpression`, `camunda:expression`, `camunda:resultVariable` |
+| Automated service / integration / internal processing | `serviceTask` | `camunda:type="external"` + `camunda:topic`, `camunda:class`, `camunda:delegateExpression`, `camunda:expression`, `camunda:resultVariable` |
+| DMN decision | `businessRuleTask` | `camunda:decisionRef`, `camunda:resultVariable`, `camunda:mapDecisionResult` |
+| Inline script | `scriptTask` | `scriptFormat` + inline `<script>` or `camunda:resource` |
+| Wait for an incoming message | `receiveTask` | assignment-style attributes are not used |
+
+**Anti-pattern:** `camunda:candidateGroups` on `sendTask`. If the action is performed by a human via Tasklist, model it as `userTask`, not `sendTask`.
+
+**Naming and granularity rules (prevent unreadable diagrams):**
+
+1. Task names should be 2-4 words, infinitive + object. Put long explanations into `<bpmn:documentation>`.
+2. Never change BPMNShape size just to fit long text.
+   - `userTask` / `serviceTask` / `sendTask`: `100x80`
+   - event: `36x36`
+   - gateway: `50x50`
+   - collapsed `subProcess`: `100x80`
+3. Granularity is one task = one action. Decompose compound tasks joined by "and".
+4. Expand abbreviations in lane names and glossary annotations.
+5. Put source details and regulatory context into `<bpmn:documentation>`.
+6. Use `<bpmn:textAnnotation>` for cross-cutting rules, constraints, and `⚠ Уточнить` notes.
+
+**Camunda 7 extensions where applicable:**
   - User tasks: `camunda:assignee` or `camunda:candidateUsers` or `camunda:candidateGroups`
   - Service tasks (external worker pattern): `camunda:type="external"` + `camunda:topic`
   - Service tasks (internal Java): `camunda:delegateExpression` or `camunda:class` or `camunda:expression`
@@ -149,13 +175,13 @@ Run all 7 blocking checks and the optional best practices, output an explicit pa
 | 2 | BPMN schema conformance | Every element valid per BPMN 2.0 XSD; no invented tags; no C7/C8 namespace mixing; `targetNamespace` set |
 | 3 | Structural integrity | sequenceFlow refs exist; ≥ 1 start and ≥ 1 end event per process; all paths reach an end; gateway fan-in/fan-out matches semantics; no uncontrolled loops; all error/message/signal/escalation references resolve; boundary events attach correctly; no duplicate IDs; subprocess types consistent (embedded vs event subprocess); data objects/references connected |
 | 4 | Message flows и Collaboration | Message flows cross pool boundaries only; participants link to processes correctly; lane flowNodeRef membership consistent |
-| 5 | Camunda 7 executability | User tasks have assignee/candidateUsers/candidateGroups; service tasks have type+topic or delegateExpression; businessRuleTask has decisionRef; callActivity has calledElement; timer events have ISO 8601 / cron; FEEL reserved words not used as variable names; multi-instance has inputCollection; conditional events have condition expression |
+| 5 | Camunda 7 executability | User tasks have assignee/candidateUsers/candidateGroups; send/service tasks have type+topic or delegateExpression/class/expression; businessRuleTask has decisionRef; callActivity has calledElement; timer events have ISO 8601 / cron; FEEL reserved words not used as variable names; multi-instance has inputCollection; conditional events have condition expression; negative check: assignment attributes stay on userTask, technical attributes stay on serviceTask/sendTask/businessRuleTask/scriptTask |
 | 6 | DI completeness | Every flow node has BPMNShape; every flow has BPMNEdge with ≥ 2 waypoints; shapes follow standard sizes; `isHorizontal="true"` on pools/lanes; `isMarkerVisible="true"` on XOR gateways; labels positioned |
 | 7 | Language conformance | Every `name` attribute in Russian (whitelist of abbreviations/brands exempt); no English leftovers like «Start», «End», «Approved» |
 
 If any blocking check (1-7) fails → fix the XML → re-run all checks. Loop until all 7 pass.
 
-**Optional best practices (WARN, не блокируют):** 10 additional recommendations — technical ID naming conventions, event labels business-side, business vs technical errors, happy path emphasis, sentence case, one executable process, filename alignment, unused resources, empty process, circular call activity. Reported separately from blocking checks. See validation-checklist.md sections 8-17 for details.
+**Optional best practices (WARN, не блокируют):** 11 additional recommendations and checks — see validation-checklist.md sections 8-18 for details.
 
 ### Step 7 — Present to the user and ask for approval
 
@@ -167,7 +193,7 @@ Output in this exact order:
 4. **Open questions** — what the input did not specify and was assumed (deadlines, error paths, escalation, data ownership, retry policy). Cross-reference each to its «⚠ Уточнить» annotation ID in the XML.
 5. **Degraded-mode warning (ONLY if Step 1 used snapshot fallback, Option B).** Insert before the approval prompt:
 
-   > ⚠ **Внимание:** Camunda MCP был недоступен в этой сессии. Диаграмма сгенерирована на основе локального snapshot от 2026-04-23. Перед деплоем в prod рекомендуется: (1) активировать MCP и перегенерировать XML, либо (2) открыть XML в Camunda Modeler 7.x и довериться его валидатору, либо (3) вручную пройтись по `validation-checklist.md` Check 5 (Camunda executability).
+   > ⚠ **Внимание:** Camunda MCP был недоступен в этой сессии. Диаграмма сгенерирована на основе локального snapshot от 2026-04-26. Перед деплоем в prod рекомендуется: (1) активировать MCP и перегенерировать XML, либо (2) открыть XML в Camunda Modeler 7.x и довериться его валидатору, либо (3) вручную пройтись по `validation-checklist.md` Check 5 (Camunda executability).
 
 6. **Approval prompt** — end the message with this exact question (verbatim):
 

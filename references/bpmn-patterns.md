@@ -4,6 +4,11 @@
 
 Все сниппеты — Camunda 7 (Platform) compatible.
 
+> **Перед копированием сниппета:** проверь, что выбранный BPMN-тип задачи (`userTask` / `sendTask` /
+> `serviceTask` / `businessRuleTask` / `scriptTask`) совместим с прикрепляемыми `camunda:*`
+> атрибутами. Матрица совместимости — в `references/validation-checklist.md`, Check 5b.
+> Самая частая ошибка — `camunda:candidateGroups` на `sendTask` (валиден только на `userTask`).
+
 ---
 
 ## Table of Contents
@@ -16,6 +21,8 @@
 6. [B2B message exchange between pools](#6-b2b-message-exchange)
 7. [Business Rule Task via DMN](#7-business-rule-dmn)
 8. [Event-based gateway (ожидание одного из событий)](#8-event-based-gateway)
+9. [Documentation pattern](#9-documentation-pattern)
+10. [Glossary annotation pattern](#10-glossary-annotation-pattern)
 
 ---
 
@@ -216,3 +223,41 @@ ISO 8601 duration formats: `PT15M` (15 минут), `PT24H` (24 часа), `P3D`
 ```
 
 После event-based gateway идут ТОЛЬКО intermediate catch events (message, timer, signal, conditional) — задачи и другие шлюзы запрещены BPMN-спецификацией.
+
+## 9. Documentation pattern
+
+Короткое имя + `<bpmn:documentation>` для длинной прозы о том, что именно происходит в задаче.
+
+```xml
+<bpmn:userTask id="Activity_T7_SendVisaTask" name="Направить ПС на визирование"
+               camunda:candidateGroups="КСКБ">
+  <bpmn:documentation>КСКБ направляет в ПС пакет документов через СЭД: визовый PDF Соглашения,
+заключение ПС о правоспособности, чек-лист актуализации (приложение № 4), документы Клиента,
+выписка ЕГРЮЛ и нотариально удостоверенная доверенность представителя при необходимости (п. 5.23).</bpmn:documentation>
+</bpmn:userTask>
+```
+
+Лучше всего работает так:
+- имя задачи 2-4 слова;
+- прозу держать в 2-4 предложениях;
+- в конце указывать пункт регламента / ВНД / закона;
+- не дублировать имя задачи;
+- использовать это поле для деталей, которые не помещаются в коробку BPMN.
+
+## 10. Glossary annotation pattern
+
+Один общий `<bpmn:textAnnotation>` с глоссарием аббревиатур для всей диаграммы.
+
+```xml
+<bpmn:textAnnotation id="TextAnnotation_Glossary">
+  <bpmn:text>Глоссарий аббревиатур: УП — Управление продажами | КСКБ — Корпоративный сегмент
+кредитного бизнеса | ПС — Правовая служба | ОСКБ — Операционно-складской контроль бизнеса |
+УКЭП — Усиленная квалифицированная электронная подпись</bpmn:text>
+</bpmn:textAnnotation>
+```
+
+Правила:
+- annotation относится к диаграмме целиком, а не к одной задаче;
+- не дублируй в ней длинную прозу из `<bpmn:documentation>`;
+- размещай её в свободной зоне диаграммы, обычно внизу под пулом;
+- если в модели есть аббревиатуры, glossary annotation должна быть одна и понятная.
