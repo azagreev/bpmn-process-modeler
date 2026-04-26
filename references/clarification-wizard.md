@@ -290,7 +290,8 @@ The user explicitly opts into assumption mode by saying any of:
 When activated:
 - Wizard does not ask questions
 - Each missing fact becomes a `⚠ Допущение:` annotation in BPMN
-- Each assumption is eligible for the Excel sheet «Допущения»
+- Each annotation gets a corresponding row in Excel sheet «Допущения»
+- Excel sheet structure is defined in `references/excel-spec-template.md` (T-106)
 
 ### 5.2 Annotation generation rules
 
