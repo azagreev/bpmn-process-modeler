@@ -213,28 +213,66 @@ Source system not specified.
 
 ## 4. Routing by missing count (4 scenarios)
 
+### Algorithm
+
+1. After Step 1 (Camunda knowledge load), scan input for all 6 categories.
+2. Count categories that are "missing" per Section 3 heuristics.
+3. Sort missing categories by priority.
+4. Route by count:
+
+| Missing count | Action |
+|---|---|
+| 0 | Skip Wizard, inform user "Всё понятно, перехожу к генерации", proceed to Step 2 |
+| 1-2 | Ask all missing as questions |
+| 3-5 | Ask top-N missing in priority order |
+| 6+ | Offer choice: provide more details OR continue "with assumptions" |
+
+### Question composition rule
+
+- 1 question = 1 category.
+- Never group categories in one question.
+- Each question ends with: "Выбери вариант или впиши свой:"
+- Each question has 2-4 pre-built options and one "Другое: ___" slot.
+
+### Hard limits
+
+- Maximum 5 questions per Wizard pass, with no exceptions.
+- Rationale: the skill must not turn generation into a long interview.
+- If 6+ categories are missing, ask no more than top-5 by priority.
+- Missing facts below the cutoff become `⚠ Допущение:` after generation if the
+  user accepts assumption mode.
+
 ### 4.1 Zero missing -> skip
 
-If no missing categories are found, skip the Wizard. Inform the user:
-"Всё понятно, перехожу к генерации."
+Transcript:
+- User: "Смоделируй процесс: клиент подаёт заявку, менеджер проверяет документы
+  за 24 часа, при отказе заявка закрывается, данные хранятся в CRM."
+- Wizard: "Всё понятно, перехожу к генерации."
 
 ### 4.2 1-2 missing -> targeted questions
 
-Ask all missing categories as 1-2 separate questions. One question covers one
-category only.
+Transcript:
+- User: "Клиент подаёт заявку. Менеджер проверяет документы и отправляет договор."
+- Wizard: "Какие сроки важны для процесса? Выбери вариант или впиши свой:"
+- User: "24 часа на проверку."
 
 ### 4.3 3-5 missing -> priority-ordered questions
 
-Ask all missing categories, sorted by priority. Do not group categories.
+Transcript:
+- User: "Смоделируй одобрение заявки: проверка, решение, подпись."
+- Wizard asks, in order: topology, participants, exception_paths, slas,
+  data_ownership.
+- User answers only topology and participants; skipped facts use defaults.
 
 ### 4.4 6+ missing -> offer "with assumptions" mode
 
-Offer the user a choice:
-- provide more detail
-- continue "with assumptions"
-
-If assumption mode is accepted, do not ask questions. Apply defaults and mark
-each accepted default with `⚠ Допущение:`.
+Transcript:
+- User: "Смоделируй процесс продаж."
+- Wizard: "Недостаточно данных по 6 категориям. Можешь добавить описание или
+  продолжить с допущениями."
+- User: "Делай с допущениями."
+- Wizard proceeds without questions and marks accepted defaults as
+  `⚠ Допущение:`.
 
 ## 5. "With assumptions" mode
 
