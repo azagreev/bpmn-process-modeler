@@ -4,7 +4,7 @@
 
 Скилл для Claude, который превращает неструктурированное описание процесса в читаемую BPMN 2.0 схему (Camunda 7, Platform) и — по запросу — в Excel-спецификацию, сверенную со схемой.
 
-**Версия:** 2.0.1
+**Версия:** 2.0.2
 **Автор:** Andrey Zagreev — [@zagreev](https://t.me/zagreev)
 **Лицензия:** [MIT](#лицензия)
 **Целевая платформа:** Camunda 7 (Platform)
@@ -216,6 +216,16 @@ bpmn-process-modeler/
 Рекомендуется итерировать на 2–3 реальных процессах из своей предметной области перед тем, как отдавать коллегам.
 
 ## Changelog
+
+### v2.0.2 — апрель 2026
+
+Release hardening patch.
+
+- Добавлен документированный release process: signing identity, различие SSH auth/deploy/signing keys, порядок tag/release, smoke-test и post-release checklist.
+- Добавлен manual workflow `Release Verify` для проверки signed tag, GitHub Release и опубликованного `.skill`-артефакта.
+- Усилены release-тесты: changelog должен содержать текущую версию, `.skill` должен иметь один top-level каталог и не включать `tests/`, `__pycache__`, `*.pyc`.
+- Поведение повторной загрузки release asset сделано явным: `overwrite_files: true`, `fail_on_unmatched_files: true`; повторный tag push разрешён только для явного release repair без смены target commit.
+- Поведение BPMN-генерации, валидации и Excel-выгрузки не изменялось.
 
 ### v2.0.1 — апрель 2026
 

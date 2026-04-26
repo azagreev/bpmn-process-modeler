@@ -35,6 +35,12 @@ class MetadataTests(unittest.TestCase):
             if ref_name.startswith("v"):
                 self.assertEqual(ref_name, "v" + frontmatter["version"])
 
+    def test_changelog_has_current_version_section(self):
+        frontmatter = parse_skill_frontmatter()
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        expected = rf"^### v{re.escape(frontmatter['version'])}\b"
+        self.assertIsNotNone(re.search(expected, readme, re.MULTILINE))
+
     def test_snapshot_metadata_is_valid(self):
         frontmatter = parse_skill_frontmatter()
         for key in ("snapshot_version", "snapshot_date", "snapshot_expiry"):

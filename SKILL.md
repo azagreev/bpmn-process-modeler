@@ -1,7 +1,7 @@
 ---
 name: bpmn-process-modeler
 description: Converts unstructured text descriptions of business processes (meeting transcripts, written narratives, process memos) into valid BPMN 2.0 XML for Camunda Platform 7, with all diagram labels in Russian and optional Excel process specification. Use whenever the user pastes a transcript, meeting notes, or prose describing a business process and asks to model, draw, map, diagram, or convert it into BPMN, Camunda, a .bpmn file, pools and lanes, or a process XML. Also use when the user wants an Excel specification table of a BPMN process. The skill pre-loads current Camunda documentation via the Camunda MCP server (search_camunda_knowledge_sources) before generating XML, validates the result against 7 structural and language checks, asks the user for approval, then optionally exports a 9-column UTF-8 Excel specification reconciled against the diagram across 9 parity checks.
-version: 2.0.1
+version: 2.0.2
 snapshot_version: 1.0
 snapshot_date: 2026-04-23
 snapshot_expiry: 2026-10-23
