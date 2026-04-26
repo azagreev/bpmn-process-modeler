@@ -93,6 +93,21 @@ Recovery rule:
 - If recovery is uncertain, reject with the parse error message
 - Do not invent missing BPMN content during recovery
 
+### 2.6 Mixed input (text + BPMN, Update scenario)
+
+**Detection:**
+- User message contains `<?xml` or `<bpmn:` markers
+- AND has more than 2 sentences of plain text outside the XML block
+- OR `.bpmn` file attached plus text body
+- OR explicit trigger phrases: `обнови`, `дополни`, `измени`, `расширь существующий`
+
+**Routing:**
+- Mixed input → Generate with reuse-ID → Wizard (if missing facts in additions)
+
+**Conflict handling:**
+- User provided XML but did not say "update" → in Variant C, default to Generate with reuse-ID (no Validate/Fix prompt)
+- User provided XML AND said "validate" or "fix" → inform user about Variant C limitations, route to Generate with reuse-ID
+
 ## 3. Routing rules
 
 | Signal | Mode | Notes |
