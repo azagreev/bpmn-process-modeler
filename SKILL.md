@@ -79,10 +79,30 @@ At top of generated XML:
 
 ### Step 1.5 — Clarification Wizard
 
-Placeholder for v2.3.0 Wizard integration. If Step 0 routes to Generate, run the
-Wizard only when process facts are missing; if nothing is missing, inform the
-user and proceed to Step 2. Full behavior is defined in
-`references/clarification-wizard.md` and filled in by T-105.
+Run the Wizard after Camunda knowledge is available and before parsing the
+process into BPMN elements. Use `references/clarification-wizard.md` as the
+source of truth.
+
+Branching:
+- If 0 missing facts are detected: skip Wizard, inform user "Всё понятно, перехожу к генерации", proceed to Step 2.
+- If 1-5 missing facts are detected: ask targeted questions in priority order, then proceed to Step 2.
+- If 6+ missing facts are detected: offer more detail or "with assumptions" mode, then proceed to Step 2.
+
+Assumption mode trigger phrases include "делай с допущениями", "генерируй с предположениями", "не задавай вопросов", "as is", "as-is", and "just do it".
+
+#### Discipline rules for Wizard (Step 1.5)
+
+**Do NOT:**
+- Ask questions when answer is in the source text (anti-hallucination)
+- Mark as `⚠ Допущение:` what is trivially derivable (e.g., task type from verb)
+- Ask more than 5 questions in one pass
+- Skip Wizard silently — always inform user "Всё понятно, перехожу к генерации"
+
+**Do:**
+- Detect all 6 categories before deciding routing
+- Respect priority order (topology first, data_ownership last)
+- Use category default if user skips ("не знаю / пропустить")
+- Mark every accepted assumption with `⚠ Допущение:` annotation + Excel row
 
 ### Step 2 — Parse and classify the input
 
