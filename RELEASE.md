@@ -28,7 +28,25 @@ Release tags must be signed with an SSH signing key registered on the releasing 
 
 ## Pre-release checklist
 
-### v2.3.0 — release date TBD
+### v2.3.1 — release date TBD
+
+Release scope: documentation hygiene patch (no behavior changes).
+
+Required local checks:
+- `python3 -m unittest discover -s tests/release -v`
+- All existing release tests must pass.
+- The 6 new tests in `tests/release/test_metadata.py` must pass for v2.3.1:
+  - `test_changelog_release_date_is_filled`
+  - `test_historic_changelog_dates_are_filled`
+  - `test_readme_snapshot_date_matches_frontmatter`
+  - `test_readme_bpmn_patterns_count_matches_source`
+  - `test_readme_best_practices_count_matches_validation_checklist`
+  - `test_release_md_has_current_version_section`
+
+No new test modules in v2.3.1. Existing module `tests/release/test_metadata.py`
+gets six new test methods.
+
+### v2.3.0 — 2026-04-27
 
 Release scope:
 - Step 0 input classification
